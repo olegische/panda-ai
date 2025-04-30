@@ -2,17 +2,21 @@
 import hashlib
 import hmac
 import json
-from typing import Dict
-from urllib.parse import parse_qs
+from typing import Dict, cast
 
 from fastapi import Header, Request
-from fastapi.responses import JSONResponse
 
 from src.agent import AssistantOrchestrator
 from src.api.models.webhook import WebhookRequest, WebhookResponse
 from src.api.routes.base import BaseRouter
 from src.core.logger import LoggerService
 from src.core.models.errors import AgentError, ValidationError
+from src.mcp_clients.carrot_quest.models import (
+    ConversationPart,
+    Event,
+    User,
+    WebhookEvent,
+)
 
 # Define header parameters
 carrot_signature_header = Header(
@@ -131,24 +135,33 @@ class WebhookRouter(BaseRouter):
                 details={"header": "X-Carrot-Signature"},
             )
 
-        # Parse form data
+        # Parse request data
         try:
-            form_data = parse_qs(body.decode())
-            # Convert form data to dict, taking first value from lists
-            data = {k: v[0] if len(v) == 1 else v for k, v in form_data.items()}
-            
-            # Parse nested JSON structures
-            if "user" in data:
-                data["user"] = json.loads(data["user"])
-            if "event" in data:
-                data["event"] = json.loads(data["event"])
-            if "conversation" in data:
-                data["conversation"] = json.loads(data["conversation"])
-            if "message" in data:
-                data["message"] = json.loads(data["message"])
+            form_data = await request.form()
+            data = {}
+
+            # Parse nested JSON structures with type safety
+            if "user" in form_data:
+                data["user"] = User(**json.loads(str(form_data["user"])))
+            if "event" in form_data:
+                data["event"] = Event(**json.loads(str(form_data["event"])))
+            if "conversation" in form_data:
+                data["conversation"] = json.loads(str(form_data["conversation"]))
+            if "message" in form_data:
+                data["message"] = ConversationPart(**json.loads(str(form_data["message"])))
+
+            # Add non-nested fields as strings
+            data.update({
+                field: str(form_data[field])
+                for field in [
+                    "type", "token", "user_id", "event_name", "event_id",
+                    "message_id", "sending_id", "message_name"
+                ]
+                if field in form_data
+            })
 
             # Validate with Pydantic model
-            webhook_data = WebhookRequest(**data)
+            webhook_data = cast(WebhookRequest, WebhookEvent(**data))
         except Exception as e:
             self.logger.error(
                 "Invalid request payload",
@@ -213,18 +226,56 @@ class WebhookRouter(BaseRouter):
                     "user_id": data.user_id,
                 },
             )
+
+            # Ensure required fields are present
+            if not data.conversation or not data.conversation.id:
+                raise ValidationError(
+                    message="Missing conversation data",
+                    field="conversation",
+                )
+
+            if not data.message or not data.message.body:
+                raise ValidationError(
+                    message="Missing message data",
+                    field="message",
+                )
+
+            # Ensure conversation_id is not None
+            conversation_id = data.conversation.id
+            if not conversation_id:
+                raise ValidationError(
+                    message="Missing conversation ID",
+                    field="conversation.id",
+                )
+
+            # Process message
             await self.orchestrator.process_message(
-                conversation_id=data.conversation.id if data.conversation else None,
+                conversation_id=conversation_id,
                 user_id=data.user_id,
                 message=data.message.body,
-                context=data.dict(),
+                context=data.dict(exclude_none=True),
             )
             return {"status": "processing"}
 
-        # Handle event webhooks
+        # Handle event webhook
         elif data.type == "event":
+            if not data.event:
+                raise ValidationError(
+                    message="Missing event data",
+                    field="event",
+                )
+
+            self.logger.info(
+                "Processing event webhook",
+                extra={
+                    "event_name": data.event_name,
+                    "event_id": data.event_id,
+                    "user_id": data.user_id,
+                },
+            )
+
+            # Handle specific event types
             if data.event_name == "$conversation_user_started":
-                # Handle new conversation
                 if not data.conversation or not data.conversation.id:
                     raise ValidationError(
                         message="Missing conversation data",
@@ -238,11 +289,9 @@ class WebhookRouter(BaseRouter):
                         "user_id": data.user_id,
                     },
                 )
-                # Add any specific conversation start handling here
                 return {"status": "processed"}
 
             elif data.event_name == "$conversation_part_group_closed":
-                # Handle conversation closed
                 if not data.conversation or not data.conversation.id:
                     raise ValidationError(
                         message="Missing conversation data",
@@ -257,6 +306,17 @@ class WebhookRouter(BaseRouter):
                 )
                 await self.orchestrator.handle_conversation_closed(data.conversation.id)
                 return {"status": "processed"}
+
+            # Log event and return processed status
+            self.logger.info(
+                "Processing event",
+                extra={
+                    "event_name": data.event_name,
+                    "event_data": data.event.dict(exclude_none=True),
+                    "user_id": data.user_id,
+                },
+            )
+            return {"status": "processed"}
 
         self.logger.info(
             "Ignoring unsupported event",
