@@ -1,0 +1,1297 @@
+The assistant object
+Beta
+Represents an assistant that can call the model and use tools.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the assistant was created.
+
+description
+string or null
+
+The description of the assistant. The maximum length is 512 characters.
+
+id
+string
+
+The identifier, which can be referenced in API endpoints.
+
+instructions
+string or null
+
+The system instructions that the assistant uses. The maximum length is 256,000 characters.
+
+metadata
+map
+
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+model
+string
+
+ID of the model to use. You can use the List models API to see all of your available models, or see our Model overview for descriptions of them.
+
+name
+string or null
+
+The name of the assistant. The maximum length is 256 characters.
+
+object
+string
+
+The object type, which is always assistant.
+
+response_format
+"auto" or object
+
+Specifies the format that the model must output. Compatible with GPT-4o, GPT-4 Turbo, and all GPT-3.5 Turbo models since gpt-3.5-turbo-1106.
+
+Setting to { "type": "json_schema", "json_schema": {...} } enables Structured Outputs which ensures the model will match your supplied JSON schema. Learn more in the Structured Outputs guide.
+
+Setting to { "type": "json_object" } enables JSON mode, which ensures the message the model generates is valid JSON.
+
+Important: when using JSON mode, you must also instruct the model to produce JSON yourself via a system or user message. Without this, the model may generate an unending stream of whitespace until the generation reaches the token limit, resulting in a long-running and seemingly "stuck" request. Also note that the message content may be partially cut off if finish_reason="length", which indicates the generation exceeded max_tokens or the conversation exceeded the max context length.
+
+
+Hide possible types
+string
+auto is the default value
+
+Text
+object
+Default response format. Used to generate text responses.
+
+
+Hide properties
+type
+string
+
+The type of response format being defined. Always text.
+
+JSON object
+object
+JSON object response format. An older method of generating JSON responses. Using json_schema is recommended for models that support it. Note that the model will not generate JSON without a system or user message instructing it to do so.
+
+
+Hide properties
+type
+string
+
+The type of response format being defined. Always json_object.
+
+JSON schema
+object
+JSON Schema response format. Used to generate structured JSON responses. Learn more about Structured Outputs.
+
+
+Hide properties
+json_schema
+object
+
+Structured Outputs configuration options, including a JSON Schema.
+
+
+Hide properties
+name
+string
+
+The name of the response format. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+
+description
+string
+
+A description of what the response format is for, used by the model to determine how to respond in the format.
+
+schema
+object
+
+The schema for the response format, described as a JSON Schema object. Learn how to build JSON schemas here.
+
+strict
+boolean or null
+
+Whether to enable strict schema adherence when generating the output. If set to true, the model will always follow the exact schema defined in the schema field. Only a subset of JSON Schema is supported when strict is true. To learn more, read the Structured Outputs guide.
+
+type
+string
+
+The type of response format being defined. Always json_schema.
+
+temperature
+number or null
+
+What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
+
+tool_resources
+object or null
+
+A set of resources that are used by the assistant's tools. The resources are specific to the type of tool. For example, the code_interpreter tool requires a list of file IDs, while the file_search tool requires a list of vector store IDs.
+
+
+Hide properties
+code_interpreter
+object
+
+
+Hide properties
+file_ids
+array
+
+A list of file IDs made available to the `code_interpreter`` tool. There can be a maximum of 20 files associated with the tool.
+
+file_search
+object
+
+
+Hide properties
+vector_store_ids
+array
+
+The ID of the vector store attached to this assistant. There can be a maximum of 1 vector store attached to the assistant.
+
+tools
+array
+
+A list of tool enabled on the assistant. There can be a maximum of 128 tools per assistant. Tools can be of types code_interpreter, file_search, or function.
+
+
+Hide possible types
+Code interpreter tool
+object
+
+Hide properties
+type
+string
+
+The type of tool being defined: code_interpreter
+
+FileSearch tool
+object
+
+Hide properties
+type
+string
+
+The type of tool being defined: file_search
+
+file_search
+object
+
+Overrides for the file search tool.
+
+
+Show properties
+Function tool
+object
+
+Hide properties
+function
+object
+
+
+Show properties
+type
+string
+
+The type of tool being defined: function
+
+top_p
+number or null
+
+An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+
+We generally recommend altering this or temperature but not both.
+
+
+-----
+
+The thread object
+Beta
+Represents a thread that contains messages.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the thread was created.
+
+id
+string
+
+The identifier, which can be referenced in API endpoints.
+
+metadata
+map
+
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+object
+string
+
+The object type, which is always thread.
+
+tool_resources
+object or null
+
+A set of resources that are made available to the assistant's tools in this thread. The resources are specific to the type of tool. For example, the code_interpreter tool requires a list of file IDs, while the file_search tool requires a list of vector store IDs.
+
+
+Hide properties
+code_interpreter
+object
+
+
+Hide properties
+file_ids
+array
+
+A list of file IDs made available to the code_interpreter tool. There can be a maximum of 20 files associated with the tool.
+
+file_search
+object
+
+
+Hide properties
+vector_store_ids
+array
+
+The vector store attached to this thread. There can be a maximum of 1 vector store attached to the thread.
+
+-----
+
+The message object
+Beta
+Represents a message within a thread.
+
+assistant_id
+string or null
+
+If applicable, the ID of the assistant that authored this message.
+
+attachments
+array or null
+
+A list of files attached to the message, and the tools they were added to.
+
+
+Hide properties
+file_id
+string
+
+The ID of the file to attach to the message.
+
+tools
+array
+
+The tools to add this file to.
+
+
+Hide possible types
+Code interpreter tool
+object
+
+Hide properties
+type
+string
+
+The type of tool being defined: code_interpreter
+
+FileSearch tool
+object
+
+Hide properties
+type
+string
+
+The type of tool being defined: file_search
+
+completed_at
+integer or null
+
+The Unix timestamp (in seconds) for when the message was completed.
+
+content
+array
+
+The content of the message in array of text and/or images.
+
+
+Hide possible types
+Image file
+object
+References an image File in the content of a message.
+
+
+Hide properties
+image_file
+object
+
+
+Hide properties
+file_id
+string
+
+The File ID of the image in the message content. Set purpose="vision" when uploading the File if you need to later display the file content.
+
+detail
+string
+
+Specifies the detail level of the image if specified by the user. low uses fewer tokens, you can opt in to high resolution using high.
+
+type
+string
+
+Always image_file.
+
+Image URL
+object
+References an image URL in the content of a message.
+
+
+Hide properties
+image_url
+object
+
+
+Hide properties
+url
+string
+
+The external URL of the image, must be a supported image types: jpeg, jpg, png, gif, webp.
+
+detail
+string
+
+Specifies the detail level of the image. low uses fewer tokens, you can opt in to high resolution using high. Default value is auto
+
+type
+string
+
+The type of the content part.
+
+Text
+object
+The text content that is part of a message.
+
+
+Hide properties
+text
+object
+
+
+Hide properties
+annotations
+array
+
+
+Hide possible types
+File citation
+object
+A citation within the message that points to a specific quote from a specific File associated with the assistant or the message. Generated when the assistant uses the "file_search" tool to search files.
+
+
+Hide properties
+end_index
+integer
+
+file_citation
+object
+
+
+Hide properties
+file_id
+string
+
+The ID of the specific File the citation is from.
+
+start_index
+integer
+
+text
+string
+
+The text in the message content that needs to be replaced.
+
+type
+string
+
+Always file_citation.
+
+File path
+object
+A URL for the file that's generated when the assistant used the code_interpreter tool to generate a file.
+
+
+Hide properties
+end_index
+integer
+
+file_path
+object
+
+
+Hide properties
+file_id
+string
+
+The ID of the file that was generated.
+
+start_index
+integer
+
+text
+string
+
+The text in the message content that needs to be replaced.
+
+type
+string
+
+Always file_path.
+
+value
+string
+
+The data that makes up the text.
+
+type
+string
+
+Always text.
+
+Refusal
+object
+The refusal content generated by the assistant.
+
+
+Hide properties
+refusal
+string
+
+type
+string
+
+Always refusal.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the message was created.
+
+id
+string
+
+The identifier, which can be referenced in API endpoints.
+
+incomplete_at
+integer or null
+
+The Unix timestamp (in seconds) for when the message was marked as incomplete.
+
+incomplete_details
+object or null
+
+On an incomplete message, details about why the message is incomplete.
+
+
+Hide properties
+reason
+string
+
+The reason the message is incomplete.
+
+metadata
+map
+
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+object
+string
+
+The object type, which is always thread.message.
+
+role
+string
+
+The entity that produced the message. One of user or assistant.
+
+run_id
+string or null
+
+The ID of the run associated with the creation of this message. Value is null when messages are created manually using the create message or create thread endpoints.
+
+status
+string
+
+The status of the message, which can be either in_progress, incomplete, or completed.
+
+thread_id
+string
+
+The thread ID that this message belongs to.
+
+-----
+
+The run object
+Beta
+Represents an execution run on a thread.
+
+assistant_id
+string
+
+The ID of the assistant used for execution of this run.
+
+cancelled_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run was cancelled.
+
+completed_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run was completed.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the run was created.
+
+expires_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run will expire.
+
+failed_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run failed.
+
+id
+string
+
+The identifier, which can be referenced in API endpoints.
+
+incomplete_details
+object or null
+
+Details on why the run is incomplete. Will be null if the run is not incomplete.
+
+
+Hide properties
+reason
+string
+
+The reason why the run is incomplete. This will point to which specific token limit was reached over the course of the run.
+
+instructions
+string
+
+The instructions that the assistant used for this run.
+
+last_error
+object or null
+
+The last error associated with this run. Will be null if there are no errors.
+
+
+Hide properties
+code
+string
+
+One of server_error, rate_limit_exceeded, or invalid_prompt.
+
+message
+string
+
+A human-readable description of the error.
+
+max_completion_tokens
+integer or null
+
+The maximum number of completion tokens specified to have been used over the course of the run.
+
+max_prompt_tokens
+integer or null
+
+The maximum number of prompt tokens specified to have been used over the course of the run.
+
+metadata
+map
+
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+model
+string
+
+The model that the assistant used for this run.
+
+object
+string
+
+The object type, which is always thread.run.
+
+parallel_tool_calls
+boolean
+
+Whether to enable parallel function calling during tool use.
+
+required_action
+object or null
+
+Details on the action required to continue the run. Will be null if no action is required.
+
+
+Hide properties
+submit_tool_outputs
+object
+
+Details on the tool outputs needed for this run to continue.
+
+
+Hide properties
+tool_calls
+array
+
+A list of the relevant tool calls.
+
+
+Hide properties
+function
+object
+
+The function definition.
+
+
+Hide properties
+arguments
+string
+
+The arguments that the model expects you to pass to the function.
+
+name
+string
+
+The name of the function.
+
+id
+string
+
+The ID of the tool call. This ID must be referenced when you submit the tool outputs in using the Submit tool outputs to run endpoint.
+
+type
+string
+
+The type of tool call the output is required for. For now, this is always function.
+
+type
+string
+
+For now, this is always submit_tool_outputs.
+
+response_format
+"auto" or object
+
+Specifies the format that the model must output. Compatible with GPT-4o, GPT-4 Turbo, and all GPT-3.5 Turbo models since gpt-3.5-turbo-1106.
+
+Setting to { "type": "json_schema", "json_schema": {...} } enables Structured Outputs which ensures the model will match your supplied JSON schema. Learn more in the Structured Outputs guide.
+
+Setting to { "type": "json_object" } enables JSON mode, which ensures the message the model generates is valid JSON.
+
+Important: when using JSON mode, you must also instruct the model to produce JSON yourself via a system or user message. Without this, the model may generate an unending stream of whitespace until the generation reaches the token limit, resulting in a long-running and seemingly "stuck" request. Also note that the message content may be partially cut off if finish_reason="length", which indicates the generation exceeded max_tokens or the conversation exceeded the max context length.
+
+
+Hide possible types
+string
+auto is the default value
+
+Text
+object
+Default response format. Used to generate text responses.
+
+
+Show properties
+JSON object
+object
+JSON object response format. An older method of generating JSON responses. Using json_schema is recommended for models that support it. Note that the model will not generate JSON without a system or user message instructing it to do so.
+
+
+Hide properties
+type
+string
+
+The type of response format being defined. Always json_object.
+
+JSON schema
+object
+JSON Schema response format. Used to generate structured JSON responses. Learn more about Structured Outputs.
+
+
+Hide properties
+json_schema
+object
+
+Structured Outputs configuration options, including a JSON Schema.
+
+
+Hide properties
+name
+string
+
+The name of the response format. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+
+description
+string
+
+A description of what the response format is for, used by the model to determine how to respond in the format.
+
+schema
+object
+
+The schema for the response format, described as a JSON Schema object. Learn how to build JSON schemas here.
+
+strict
+boolean or null
+
+Whether to enable strict schema adherence when generating the output. If set to true, the model will always follow the exact schema defined in the schema field. Only a subset of JSON Schema is supported when strict is true. To learn more, read the Structured Outputs guide.
+
+type
+string
+
+The type of response format being defined. Always json_schema.
+
+started_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run was started.
+
+status
+string
+
+The status of the run, which can be either queued, in_progress, requires_action, cancelling, cancelled, failed, completed, incomplete, or expired.
+
+temperature
+number or null
+
+The sampling temperature used for this run. If not set, defaults to 1.
+
+thread_id
+string
+
+The ID of the thread that was executed on as a part of this run.
+
+tool_choice
+string or object
+
+Controls which (if any) tool is called by the model. none means the model will not call any tools and instead generates a message. auto is the default value and means the model can pick between generating a message or calling one or more tools. required means the model must call one or more tools before responding to the user. Specifying a particular tool like {"type": "file_search"} or {"type": "function", "function": {"name": "my_function"}} forces the model to call that tool.
+
+
+Hide possible types
+string
+none means the model will not call any tools and instead generates a message. auto means the model can pick between generating a message or calling one or more tools. required means the model must call one or more tools before responding to the user.
+
+object
+Specifies a tool the model should use. Use to force the model to call a specific tool.
+
+
+Hide properties
+type
+string
+
+The type of the tool. If type is function, the function name must be set
+
+function
+object
+
+
+Hide properties
+name
+string
+
+The name of the function to call.
+
+tools
+array
+
+The list of tools that the assistant used for this run.
+
+
+Hide possible types
+Code interpreter tool
+object
+
+Hide properties
+type
+string
+
+The type of tool being defined: code_interpreter
+
+FileSearch tool
+object
+
+Hide properties
+type
+string
+
+The type of tool being defined: file_search
+
+file_search
+object
+
+Overrides for the file search tool.
+
+
+Hide properties
+max_num_results
+integer
+
+The maximum number of results the file search tool should output. The default is 20 for gpt-4* models and 5 for gpt-3.5-turbo. This number should be between 1 and 50 inclusive.
+
+Note that the file search tool may output fewer than max_num_results results. See the file search tool documentation for more information.
+
+ranking_options
+object
+
+The ranking options for the file search. If not specified, the file search tool will use the auto ranker and a score_threshold of 0.
+
+See the file search tool documentation for more information.
+
+
+Hide properties
+score_threshold
+number
+
+The score threshold for the file search. All values must be a floating point number between 0 and 1.
+
+ranker
+string
+
+The ranker to use for the file search. If not specified will use the auto ranker.
+
+Function tool
+object
+
+Hide properties
+function
+object
+
+
+Hide properties
+name
+string
+
+The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+
+description
+string
+
+A description of what the function does, used by the model to choose when and how to call the function.
+
+parameters
+object
+
+The parameters the functions accepts, described as a JSON Schema object. See the guide for examples, and the JSON Schema reference for documentation about the format.
+
+Omitting parameters defines a function with an empty parameter list.
+
+strict
+boolean or null
+
+Whether to enable strict schema adherence when generating the function call. If set to true, the model will follow the exact schema defined in the parameters field. Only a subset of JSON Schema is supported when strict is true. Learn more about Structured Outputs in the function calling guide.
+
+type
+string
+
+The type of tool being defined: function
+
+top_p
+number or null
+
+The nucleus sampling value used for this run. If not set, defaults to 1.
+
+truncation_strategy
+object or null
+
+Controls for how a thread will be truncated prior to the run. Use this to control the intial context window of the run.
+
+
+Hide properties
+type
+string
+
+The truncation strategy to use for the thread. The default is auto. If set to last_messages, the thread will be truncated to the n most recent messages in the thread. When set to auto, messages in the middle of the thread will be dropped to fit the context length of the model, max_prompt_tokens.
+
+last_messages
+integer or null
+
+The number of most recent messages from the thread when constructing the context for the run.
+
+usage
+object or null
+
+Usage statistics related to the run. This value will be null if the run is not in a terminal state (i.e. in_progress, queued, etc.).
+
+
+Hide properties
+completion_tokens
+integer
+
+Number of completion tokens used over the course of the run.
+
+prompt_tokens
+integer
+
+Number of prompt tokens used over the course of the run.
+
+total_tokens
+integer
+
+Total number of tokens used (prompt + completion).
+
+-----
+
+The run step object
+Beta
+Represents a step in execution of a run.
+
+assistant_id
+string
+
+The ID of the assistant associated with the run step.
+
+cancelled_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run step was cancelled.
+
+completed_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run step completed.
+
+created_at
+integer
+
+The Unix timestamp (in seconds) for when the run step was created.
+
+expired_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run step expired. A step is considered expired if the parent run is expired.
+
+failed_at
+integer or null
+
+The Unix timestamp (in seconds) for when the run step failed.
+
+id
+string
+
+The identifier of the run step, which can be referenced in API endpoints.
+
+last_error
+object or null
+
+The last error associated with this run step. Will be null if there are no errors.
+
+
+Hide properties
+code
+string
+
+One of server_error or rate_limit_exceeded.
+
+message
+string
+
+A human-readable description of the error.
+
+metadata
+map
+
+Set of 16 key-value pairs that can be attached to an object. This can be useful for storing additional information about the object in a structured format, and querying for objects via API or the dashboard.
+
+Keys are strings with a maximum length of 64 characters. Values are strings with a maximum length of 512 characters.
+
+object
+string
+
+The object type, which is always thread.run.step.
+
+run_id
+string
+
+The ID of the run that this run step is a part of.
+
+status
+string
+
+The status of the run step, which can be either in_progress, cancelled, failed, completed, or expired.
+
+step_details
+object
+
+The details of the run step.
+
+
+Hide possible types
+Message creation
+object
+Details of the message creation by the run step.
+
+
+Hide properties
+message_creation
+object
+
+
+Hide properties
+message_id
+string
+
+The ID of the message that was created by this run step.
+
+type
+string
+
+Always message_creation.
+
+Tool calls
+object
+Details of the tool call.
+
+
+Hide properties
+tool_calls
+array
+
+An array of tool calls the run step was involved in. These can be associated with one of three types of tools: code_interpreter, file_search, or function.
+
+
+Hide possible types
+Code Interpreter tool call
+object
+Details of the Code Interpreter tool call the run step was involved in.
+
+
+Hide properties
+code_interpreter
+object
+
+The Code Interpreter tool call definition.
+
+
+Hide properties
+input
+string
+
+The input to the Code Interpreter tool call.
+
+outputs
+array
+
+The outputs from the Code Interpreter tool call. Code Interpreter can output one or more items, including text (logs) or images (image). Each of these are represented by a different object type.
+
+
+Hide possible types
+Code Interpreter log output
+object
+Text output from the Code Interpreter tool call as part of a run step.
+
+
+Hide properties
+logs
+string
+
+The text output from the Code Interpreter tool call.
+
+type
+string
+
+Always logs.
+
+Code Interpreter image output
+object
+
+Hide properties
+image
+object
+
+
+Hide properties
+file_id
+string
+
+The file ID of the image.
+
+type
+string
+
+Always image.
+
+id
+string
+
+The ID of the tool call.
+
+type
+string
+
+The type of tool call. This is always going to be code_interpreter for this type of tool call.
+
+File search tool call
+object
+
+Hide properties
+file_search
+map
+
+For now, this is always going to be an empty object.
+
+
+Hide properties
+ranking_options
+object
+
+The ranking options for the file search.
+
+
+Hide properties
+ranker
+string
+
+The ranker to use for the file search. If not specified will use the auto ranker.
+
+score_threshold
+number
+
+The score threshold for the file search. All values must be a floating point number between 0 and 1.
+
+results
+array
+
+The results of the file search.
+
+
+Hide properties
+file_id
+string
+
+The ID of the file that result was found in.
+
+file_name
+string
+
+The name of the file that result was found in.
+
+score
+number
+
+The score of the result. All values must be a floating point number between 0 and 1.
+
+content
+array
+
+The content of the result that was found. The content is only included if requested via the include query parameter.
+
+
+Hide properties
+text
+string
+
+The text content of the file.
+
+type
+string
+
+The type of the content.
+
+id
+string
+
+The ID of the tool call object.
+
+type
+string
+
+The type of tool call. This is always going to be file_search for this type of tool call.
+
+Function tool call
+object
+
+Hide properties
+function
+object
+
+The definition of the function that was called.
+
+
+Hide properties
+arguments
+string
+
+The arguments passed to the function.
+
+name
+string
+
+The name of the function.
+
+output
+string or null
+
+The output of the function. This will be null if the outputs have not been submitted yet.
+
+id
+string
+
+The ID of the tool call object.
+
+type
+string
+
+The type of tool call. This is always going to be function for this type of tool call.
+
+type
+string
+
+Always tool_calls.
+
+thread_id
+string
+
+The ID of the thread that was run.
+
+type
+string
+
+The type of run step, which can be either message_creation or tool_calls.
+
+usage
+object or null
+
+Usage statistics related to the run step. This value will be null while the run step's status is in_progress.
+
+
+Hide properties
+completion_tokens
+integer
+
+Number of completion tokens used over the course of the run step.
+
+prompt_tokens
+integer
+
+Number of prompt tokens used over the course of the run step.
+
+total_tokens
+integer
+
+Total number of tokens used (prompt + completion).

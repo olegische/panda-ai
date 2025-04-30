@@ -1,0 +1,545 @@
+Методы Web API
+Методы соответствуют общим правилам. Все вызовы требуют авторизации.
+
+Apps
+Метод	URL	Описание
+GET	/apps/{id}/activeusers	Получить онлайн-пользователей на сайте
+GET	/apps/{id}/users	Получить пользователей (лидов)
+GET	/apps/{id}/conversations	Получить диалоги приложения
+GET	/apps/{id}/channels	Получить каналы приложения
+Conversations
+Метод	URL	Описание
+GET	/conversations/{id}	Получить конкретный диалог
+Получить диалог
+ДокументацияТестер
+Этот метод позволяет получить данные о конкретном диалоге.
+
+URL
+GET https://api.carrotquest.io/conversations/{id}
+В качестве {id} нужно использовать ID диалога.
+
+Параметры
+Параметры аутентификации.
+Параметр id_as_string.
+Параметры, включающие опциональные поля объекта Conversation.
+Опциональные поля user, channel, important_part_last, reply_last, part_last включены по умолчанию.
+
+Ответ
+Поле data будет содержать объект Conversation.
+
+{
+  "data": {
+    "id": 7100586,
+    "created": 1450342055,
+    "user": {
+      "id": 7722092,
+      "app": 3,
+      "user_id": "27384",
+      "presence": "idle",
+      "props": {
+        "$last_seen": "2015-12-17T13:01:32",
+        "$name": "Alex",
+        "$email": "alex@example.com",
+        ...
+      }
+    },
+    "read": true,
+    "replied": true,
+    "clicked": false,
+    "unsubscribed": false,
+    "closed": false,
+    "message": null,
+    "type": "popup_chat",
+    "reply_type": "text",
+    "part_last": {
+      "id": 7855356,
+      "created": 1450345019,
+      "conversation": 7100586,
+      "body": "...",
+      "type": "reply_user",
+      "sent_via": "web_user",
+      "from": 16588048
+    },
+    "parts_count": 13,
+    "assignee": null,
+    "unread_parts_count": 2,
+    "last_admin": {
+      "id": 24601,
+      "name": "Maks",
+      "avatar": "https://files.carrotquest.io/avatars/1446021235578-n653y667.jpg",
+      "type": "admin"
+    },
+    "last_update": 1450345019,
+    "tags": []
+  }
+  "meta": {
+    "status": 200
+  }
+}
+Ошибки
+Стандартные ошибки Web API.
+
+Примеры
+curl -X GET -H "Authorization: Token XXX" "https://api.carrotquest.io/conversations/313341"
+
+GET	/conversations/{id}/parts	Получить части (сообщения) диалога
+Получить реплики диалога
+ДокументацияТестер
+Этот метод позволяет получить сообщения в конкретном диалоге (реплики диалога).
+
+URL
+GET https://api.carrotquest.io/conversations/{id}/parts
+В качестве {id} нужно использовать ID диалога.
+
+Параметры
+Параметры аутентификации.
+Параметры пагинации. Пагинация по первичному ключу объекта ConversationPart.
+Параметр id_as_string.
+Параметры, включающие опциональные поля объекта ConversationPart.
+
+Ответ
+Поле data ответа будет содержать объекты ConversationPart.
+Поле meta будет содержать новые параметры пагинации.
+
+{
+  "data": [
+    {
+      "id": 7936880,
+      "created": 1450420434,
+      "conversation": 7179725,
+      "body": "...",
+      "read": true,
+      "type": "reply_admin",
+      "sent_via": "app_chrome",
+      "from": {
+        "id": 14709,
+        "name": "Alex",
+        "avatar": "https://files.carrotquest.io/avatars/1422020258978-15jb56g7.jpg",
+        "type": "admin"
+      }
+    },
+    ...
+  ],
+  "meta": {
+    "next_before_position": [7936756],
+    "status": 200
+  }
+}
+Ошибки
+Стандартные ошибки Web API.
+
+Примеры
+curl -X GET -H "Authorization: Token XXX" "https://api.carrotquest.io/conversations/313341/parts"
+
+POST	/conversations/{id}/reply	Ответить в диалоге
+Ответить в диалоге
+ДокументацияТестер
+Этот метод позволяет отвечать в диалоге и добавлять внутренние заметки.
+
+URL
+POST https://api.carrotquest.io/conversations/{id}/reply
+В качестве {id} нужно использовать ID диалога.
+
+Параметры
+Параметры аутентификации.
+Параметр id_as_string.
+Параметры, включающие опциональные поля объекта ConversationPart.
+
+Параметр	Тип	Описание
+body	Optional[строка]	Текст сообщения. Может быть не задан, если сообщение содержит только приложение без текста (например, картинку). По умолчанию, пустая строка
+body_json	Optional[Dict]	Дополнительные данные с контентом сообщения в формате json. Зависят от типа создаваемой реплики
+attachment	Optional[File]	Файл приложения к реплике.
+attachment_file_name	Optional[строка]	Название файла-приложения для вывода в чате. Строка от 1 до 255 символов.
+from_user	Optional[ID]	Укажите default_user в случае отправки сообщения от пользователя на сайте или ID пользователя вашего сайта
+from_admin	Optional[ID/default_admin]	Укажите ID администратора в случае ответа от администратора или default_admin для отправки от имени дефолтного отправителя сайта
+type	Optional[строка]	Тип реплики. Допустимы типы reply_admin, note, article. При отправке от имени пользователя (from_user) параметр игнорируется. По умолчанию: reply_admin
+external_id	Optional[строка]	Id сообщения во внешнем сервисе
+random_id	Optional[integer]	Случайное целое число, чтобы сопостовлять создаваемое сообщение с репликой из RTS. По умолчанию, 0
+auto_assign	Optional[ID]	ID администратора. Перед ответом автоматически назначить диалог администратору с этим ID
+auto_assign_random_id	Optional[integer]	Случайный ID ConversationPart о назначении для контроля отправки. По умолчанию: 0
+referrer	Optional[строка]	URL страницы, с которой написано сообщение. По умолчанию не задан.
+Замечания
+Чтобы контролировать, от чьего имени будет отправлено сообщение, используйте параметры from_admin и from_user.
+Чтобы указать тип сообщения (обычный ответ reply_admin, заметка note или статья базы знаний article), задайте type.
+
+Чтобы перед ответом автоматически назначить диалог на того или иного администратора, можно указать его ID в поле auto_assign. При этом будет создано 2 реплики, а не одна: системная реплика назначения на оператора и основная реплика.
+
+random_id и auto_assign_random_id используются для сопоставления реплики, пришедшей через Realtime services. Вы можете записать сюда случайное 32-битное число, которое придет в поле random_id объекта ConversationPart, созданного этим запросом. В этом случае нельзя использовать ID реплики, поскольку Realtime services работают асинхронно и сообщение туда может прийти раньше, чем вы получите ответ на запрос создания реплики. А может и наоборот. Порядок не определен.
+
+Ответ
+Поле data будет содержать созданные реплики (объекты ConversationPart):
+
+основная реплика будет возвращена как базовое содержимое data
+реплика назначения будет возвращена в поле data.assign_part (если был указан параметр auto_assign)
+Пример:
+
+{
+  "data": {
+    "id": "1453279698921457472",
+    "created": 1685352440,
+    "conversation": "1447294760057308402",
+    "body": "",
+    "body_json": {},
+    "direction": "u2a",
+    "type": "reply_user",
+    "sent_via": "api",
+    "attachments": [
+      {
+        "type": "file",
+        "id": "1453279691052943108",
+        "filename": "test_import.csv",
+        "mime_type": "text/csv",
+        "size": 156,
+        "url": "https://files.carrotquest.app/attachments/2782/2e7cac55-dff0-4142-9460-14d64ff08623/test_import.csv",
+        "created": 1685352439
+      }
+    ],
+    "meta_data": {},
+    "reply_type": "no",
+    "actions": null,
+    "edited": null,
+    "removed": null,
+    "external_id": null,
+    "part_group": "1447294760216691955",
+    "from": "1447294708215711734",
+    "assign_part": {
+      "id": "1453281238935668443",
+      "created": 1685352624,
+      "conversation": "1447294760057308402",
+      "body": "",
+      "body_json": {},
+      "direction": "a2u",
+      "type": "assigned",
+      "sent_via": "api",
+      "meta_data": {},
+      "reply_type": "no",
+      "actions": null,
+      "edited": null,
+      "removed": null,
+      "external_id": null,
+      "part_group": "1447294760216691955",
+      "assignee": {
+        "id": "30542",
+        "name": "Test",
+        "avatar": "https://files.carrotquest.app/avatars/default-v4.png",
+        "type": "admin"
+      },
+      "from": {
+        "id": "30542",
+        "name": "Test",
+        "avatar": "https://files.carrotquest.app/avatars/default-v4.png",
+        "type": "admin"
+      }
+    }
+  },
+  "meta": {
+    "status": 200
+  }
+}
+Ошибки
+Стандартные ошибки Web API.
+
+Ошибки данного метода
+Ошибка	Код	Описание
+ReplyTooBig	400	Слишком длинный текст реплики (body)
+Примеры
+Ответить от имени администратора и назначить диалог на него (ID администратора 8164):
+
+curl -X POST \
+  --data-urlencode "body=Some Admin Message" \
+  --data-urlencode "from_admin=8164" \
+  --data-urlencode "auto_assign=8164" \
+  -H "Authorization: Token XXX" \
+  https://api.carrotquest.io/conversations/1789152/reply
+Ответить от имени пользователя на сайте:
+
+curl -X POST \
+  --data-urlencode "body=Some User Message" \
+  --data-urlencode "from_user=default_user" \
+  -H "Authorization: Token XXX" \
+  https://api.carrotquest.io/conversations/1789152/reply
+Добавить заметку от имени администратора (ID администратора 8164):
+
+curl -X POST \
+  --data-urlencode "body=Some Admin Message" \
+  --data-urlencode "from_admin=8164" \
+  --data-urlencode "type=note" \
+  -H "Authorization: Token XXX" \
+  https://api.carrotquest.io/conversations/1789152/reply
+
+POST	/conversations/{id}/settyping	Кто-то печатает ...
+Кто-то печатает ...
+ДокументацияТестер
+Этот метод позволяет установить статус "Пользователь Х печатает сообщение ..." в диалоге. Можно передать печатаемое сообщение, получается "наблюдение за печатью".
+
+URL
+POST https://api.carrotquest.io/conversations/{id}/settyping
+В качестве {id} нужно использовать ID диалога.
+
+Параметры
+Параметры аутентификации.
+Параметр id_as_string.
+
+Параметр	Тип	Описание
+body	строка	Набираемое сообщение
+from_user	Optional[ID]	ID пользователя, от имени которого отправляется typing
+from_admin	Optional[ID/default_admin]	Укажите ID администратора в случае ответа от администратора или default_admin для отправки от имени дефолтного отправителя сайта
+Замечания
+Чтобы контролировать, от чьего имени будет отправлено сообщение, используйте параметры from_admin и from_user.
+
+Ответ
+Поле data возвращается пустым.
+
+{
+  "data": {},
+  "meta": {
+    "status": 200
+  }
+}
+Ошибки
+Стандартные ошибки Web API.
+
+Примеры
+Установить "печатает пользователь на сайте":
+
+curl -X POST \
+  --data-urlencode "body=My Message" \
+  --data-urlencode "from_user=true" \
+  -H "Authorization: Token XXX" \
+  https://api.carrotquest.io/conversations/1789152/settyping
+Установить "печатает администратор" (ID администратора 8164):
+
+curl -X POST \
+  --data-urlencode "body=My Message" \
+  --data-urlencode "from_admin=8164" \
+  -H "Authorization: Token XXX" \
+  https://api.carrotquest.io/conversations/1789152/settyping
+Установить "печатает администратор по умолчанию":
+
+curl -X POST \
+  --data-urlencode "body=My Message" \
+  --data-urlencode "from_admin=default_admin" \
+  -H "Authorization: Token XXX" \
+  https://api.carrotquest.io/conversations/1789152/settyping
+
+POST	/conversations/{id}/assign	Назначить диалог администратору
+Назначить диалог
+ДокументацияТестер
+Этот метод назначает определенный диалог определенному администратору (или снимает назначение).
+
+URL
+POST https://api.carrotquest.io/conversations/{id}/assign
+В качестве {id} нужно использовать ID диалога.
+
+Параметры
+Параметры аутентификации.
+Параметр id_as_string.
+
+Параметр	Тип	Описание
+admin	Optional[ID]	ID администратора, которому назначается диалог. Если не задан - назначение снимается с текущего оператора.
+from_admin	ID/default_admin	Укажите ID администратора в случае ответа от администратора или default_admin для отправки от имени дефолтного отправителя сайта
+random_id	Optional[integer]	Случайное целое число, чтобы сопостовлять создаваемое сообщение с репликой из RTS. По умолчанию, 0
+Замечания
+Если диалог уже назначен на указанного администратора, ничего не произойдет, будет возвращен ответ со стаусом 200.
+
+Чтобы контролировать, кто производит назначение, используйте параметр from_admin.
+
+random_id используются для сопоставления реплики, пришедшей через Realtime services. Вы можете записать сюда случайное 32-битное число, которое придет в поле random_id объекта ConversationPart, созданного этим запросом. В этом случае нельзя использовать ID реплики, поскольку Realtime services работают асинхронно и сообщение туда может прийти раньше, чем вы получите ответ на запрос создания реплики. А может и наоборот. Порядок не определен.
+
+Ответ
+Если назначение не изменилось, будет возвращен пустой ответ в поле data.
+
+В случае, если реплика была создана в поле data будет возвращен словарь, содержащий:
+
+id: ID - идентификатор созданной системной реплики назначения
+part_group: ID - идентификатор вопроса, к которому принадлежит новая реплика
+Пример:
+
+{
+  "data": {
+    "id": 123,
+    "part_group": 345
+  },
+  "meta": {
+    "status": 200
+  }
+}
+Ошибки
+Стандартные ошибки Web API.
+
+Примеры
+Назначить диалог с ID=716 администратору с ID=819 от имени другого администратора с ID=912:
+
+curl -X POST \
+  -H "Authorization: Token XXX" \
+  --data-urlencode 'admin=819' \
+  --data-urlencode 'from_admin=912' \
+  'https://api.carrotquest.io/conversations/716/assign'
+
+POST	/conversations/{id}/tag	Добавить тег диалога
+Добавить тег диалога
+ДокументацияТестер
+Этот метод добавляет тег диалога
+
+URL
+POST https://api.carrotquest.io/conversations/{id}/tag
+В качестве {id} нужно использовать ID диалога.
+
+Параметры
+Параметры аутентификации.
+Параметр id_as_string.
+
+Параметр	Тип	Описание
+tag	строка[1;255]	Название тега. Строка от 1 до 255 символов
+from_admin	Optional[ID/default_admin]	Укажите ID администратора, ставящего или удаляющего тег, или default_admin для отправки от имени дефолтного отправителя сайта
+random_id	Optional[integer]	Случайное целое число, чтобы сопостовлять создаваемое сообщение с репликой из RTS. По умолчанию, 0
+action	Устарел. Optional[add/delete]	Устаревший. По умолчанию - add. Используйте метод DELETE вместо значения delete.
+Замечания
+Чтобы контролировать, кто устанавливает тег, используйте параметр from_admin.
+
+random_id используются для сопоставления реплики, пришедшей через Realtime services. Вы можете записать сюда случайное 32-битное число, которое придет в поле random_id объекта ConversationPart, созданного этим запросом. В этом случае нельзя использовать ID реплики, поскольку Realtime services работают асинхронно и сообщение туда может прийти раньше, чем вы получите ответ на запрос создания реплики. А может и наоборот. Порядок не определен.
+
+Ответ
+В поле data будет возвращен словарь, содержащий:
+
+id: ID - идентификатор созданной системной реплики назначения
+part_group: ID - идентификатор вопроса, к которому принадлежит новая реплика
+Пример:
+
+{
+  "data": {
+    "id": 123,
+    "part_group": 345
+  },
+  "meta": {
+    "status": 200
+  }
+}
+Ошибки
+Стандартные ошибки Web API.
+
+Ошибки данного метода
+Ошибка	Код	Описание
+ConversationTagAlreadyAssigned	400	Если при добавлении тега, он уже присвоен диалогу
+Примеры
+Добавить тег mytag диалогу с ID=716 от имени администратора с ID=912:
+
+curl -X POST \
+  -H "Authorization: Token XXX" \
+  --data-urlencode 'tag=mytag' \
+  --data-urlencode 'from_admin=912' \
+  'https://api.carrotquest.io/conversations/716/tag'
+
+DELETE	/conversations/{id}/tag	Удалить тег диалога
+Удалить тег диалога
+ДокументацияТестер
+Удаляет тег диалога.
+
+URL
+DELETE https://api.carrotquest.io/conversations/{id}/tag
+В качестве {id} нужно использовать ID диалога.
+
+Параметры
+Параметры аутентификации.
+Параметр id_as_string.
+
+Параметр	Тип	Описание
+tag	строка[1;255]	Название тега. Строка от 1 до 255 символов
+from_admin	Optional[ID/default_admin]	Укажите ID администратора, ставящего или удаляющего тег, или default_admin для отправки от имени дефолтного отправителя сайта
+random_id	Optional[integer]	Случайное целое число, чтобы сопостовлять создаваемое сообщение с репликой из RTS. По умолчанию, 0
+Замечания
+Чтобы контролировать, кто удаляет тег, используйте параметр from_admin.
+
+random_id используются для сопоставления реплики, пришедшей через Realtime services. Вы можете записать сюда случайное 32-битное число, которое придет в поле random_id объекта ConversationPart, созданного этим запросом. В этом случае нельзя использовать ID реплики, поскольку Realtime services работают асинхронно и сообщение туда может прийти раньше, чем вы получите ответ на запрос создания реплики. А может и наоборот. Порядок не определен.
+
+Ответ
+В поле data будет возвращен словарь, содержащий:
+
+id: ID - идентификатор созданной системной реплики назначения
+part_group: ID - идентификатор вопроса, к которому принадлежит новая реплика
+Пример:
+
+{
+  "data": {
+    "id": 123,
+    "part_group": 345
+  },
+  "meta": {
+    "status": 200
+  }
+}
+Ошибки
+Стандартные ошибки Web API.
+
+Ошибки данного метода
+Ошибка	Код	Описание
+ConversationTagIsNotAssigned	400	Если при удалении тэг не присвоен диалогу
+Примеры
+Удалить тег mytag диалогу с ID=716 от имени администратора с ID=912:
+
+curl -X DELETE \
+  -H "Authorization: Token XXX" \
+  --data-urlencode 'tag=mytag' \
+  --data-urlencode 'from_admin=912' \
+  'https://api.carrotquest.io/conversations/716/tag'
+
+POST	/conversations/{id}/close	Закрыть диалог
+Закрыть диалог
+ДокументацияТестер
+Этот метод используется для закрытия диалога (вопроса).
+
+URL
+POST https://api.carrotquest.io/conversations/{id}/close
+В качестве {id} нужно использовать ID диалога.
+
+Параметры
+Параметры аутентификации.
+Параметр id_as_string.
+
+Параметр	Тип	Описание
+from_admin	Optional[ID/default_admin]	Укажите ID администратора в случае ответа от администратора или default_admin для отправки от имени дефолтного отправителя сайта
+random_id	Optional[integer]	Случайное целое число, чтобы сопостовлять создаваемое сообщение с репликой из RTS. По умолчанию, 0
+Замечания
+Чтобы контролировать, от чьего имени будет закрыт диалог, используйте from_admin.
+
+Если диалог уже закрыт, ничего не произойдет, будет возвращен пустой ответ со стаусом 200.
+
+Ответ
+В поле data будет возвращен словарь, содержащий:
+
+id: ID - идентификатор созданной системной реплики закрытия
+part_group: ID - идентификатор вопроса, к которому принадлежит новая реплика
+Пример:
+
+{
+  "data": {
+    "id": 123,
+    "part_group": 345
+  },
+  "meta": {
+    "status": 200
+  }
+}
+Ошибки
+Стандартные ошибки Web API.
+
+Примеры
+Закрыть диалог с ID=716 от имени администратора с ID=912:
+
+curl -X POST \
+  -H "Authorization: Token XXX" \
+  --data-urlencode "from_admin=912" \
+  "https://api.carrotquest.io/conversations/716/close"
+  
+Users
+Метод	URL	Описание
+GET	/users/{id}	Получить данные о пользователе
+POST	/users/{id}/props	Установить свойства пользователя
+GET	/users/{id}/events	Получить события, совершенные пользователем
+POST	/users/{id}/events	Записать событие пользователя
+GET	/users/{id}/conversations	Получить диалоги с пользователем
+POST	/users/{id}/setpresence	Отправить heartbeat сигнал
+POST	/users/{id}/sendmessage	Отправить ручное сообщение пользователю
+POST	/users/{id}/startconversation	Создать диалог, начатый пользователем на сайте
+POST	/users/{id}/unsubscribeemail	Отписывает пользователя от рассылки
+POST	/users/import	Импорт пользователей из CSV-файла

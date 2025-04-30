@@ -1,0 +1,585 @@
+Streaming
+Beta
+Stream the result of executing a Run or resuming a Run after submitting tool outputs. You can stream events from the Create Thread and Run, Create Run, and Submit Tool Outputs endpoints by passing "stream": true. The response will be a Server-Sent events stream. Our Node and Python SDKs provide helpful utilities to make streaming easy. Reference the Assistants API quickstart to learn more.
+
+The message delta object
+Beta
+Represents a message delta i.e. any changed fields on a message during streaming.
+
+delta
+object
+
+The delta containing the fields that have changed on the Message.
+
+
+Hide properties
+content
+array
+
+The content of the message in array of text and/or images.
+
+
+Hide possible types
+Image file
+object
+References an image File in the content of a message.
+
+
+Hide properties
+index
+integer
+
+The index of the content part in the message.
+
+type
+string
+
+Always image_file.
+
+image_file
+object
+
+
+Hide properties
+detail
+string
+
+Specifies the detail level of the image if specified by the user. low uses fewer tokens, you can opt in to high resolution using high.
+
+file_id
+string
+
+The File ID of the image in the message content. Set purpose="vision" when uploading the File if you need to later display the file content.
+
+Text
+object
+The text content that is part of a message.
+
+
+Hide properties
+index
+integer
+
+The index of the content part in the message.
+
+type
+string
+
+Always text.
+
+text
+object
+
+
+Hide properties
+annotations
+array
+
+
+Hide possible types
+File citation
+object
+A citation within the message that points to a specific quote from a specific File associated with the assistant or the message. Generated when the assistant uses the "file_search" tool to search files.
+
+
+Hide properties
+index
+integer
+
+The index of the annotation in the text content part.
+
+type
+string
+
+Always file_citation.
+
+end_index
+integer
+
+file_citation
+object
+
+
+Hide properties
+file_id
+string
+
+The ID of the specific File the citation is from.
+
+quote
+string
+
+The specific quote in the file.
+
+start_index
+integer
+
+text
+string
+
+The text in the message content that needs to be replaced.
+
+File path
+object
+A URL for the file that's generated when the assistant used the code_interpreter tool to generate a file.
+
+
+Hide properties
+index
+integer
+
+The index of the annotation in the text content part.
+
+type
+string
+
+Always file_path.
+
+end_index
+integer
+
+file_path
+object
+
+
+Hide properties
+file_id
+string
+
+The ID of the file that was generated.
+
+start_index
+integer
+
+text
+string
+
+The text in the message content that needs to be replaced.
+
+value
+string
+
+The data that makes up the text.
+
+Refusal
+object
+The refusal content that is part of a message.
+
+
+Hide properties
+index
+integer
+
+The index of the refusal part in the message.
+
+type
+string
+
+Always refusal.
+
+refusal
+string
+
+Image URL
+object
+References an image URL in the content of a message.
+
+
+Hide properties
+index
+integer
+
+The index of the content part in the message.
+
+type
+string
+
+Always image_url.
+
+image_url
+object
+
+
+Hide properties
+detail
+string
+
+Specifies the detail level of the image. low uses fewer tokens, you can opt in to high resolution using high.
+
+url
+string
+
+The URL of the image, must be a supported image types: jpeg, jpg, png, gif, webp.
+
+role
+string
+
+The entity that produced the message. One of user or assistant.
+
+id
+string
+
+The identifier of the message, which can be referenced in API endpoints.
+
+object
+string
+
+The object type, which is always thread.message.delta.
+
+-----
+
+The run step delta object
+Beta
+Represents a run step delta i.e. any changed fields on a run step during streaming.
+
+delta
+object
+
+The delta containing the fields that have changed on the run step.
+
+
+Hide properties
+step_details
+object
+
+The details of the run step.
+
+
+Hide possible types
+Message creation
+object
+Details of the message creation by the run step.
+
+
+Hide properties
+type
+string
+
+Always message_creation.
+
+message_creation
+object
+
+
+Hide properties
+message_id
+string
+
+The ID of the message that was created by this run step.
+
+Tool calls
+object
+Details of the tool call.
+
+
+Hide properties
+type
+string
+
+Always tool_calls.
+
+tool_calls
+array
+
+An array of tool calls the run step was involved in. These can be associated with one of three types of tools: code_interpreter, file_search, or function.
+
+
+Hide possible types
+Code interpreter tool call
+object
+Details of the Code Interpreter tool call the run step was involved in.
+
+
+Hide properties
+index
+integer
+
+The index of the tool call in the tool calls array.
+
+type
+string
+
+The type of tool call. This is always going to be code_interpreter for this type of tool call.
+
+code_interpreter
+object
+
+The Code Interpreter tool call definition.
+
+
+Hide properties
+input
+string
+
+The input to the Code Interpreter tool call.
+
+outputs
+array
+
+The outputs from the Code Interpreter tool call. Code Interpreter can output one or more items, including text (logs) or images (image). Each of these are represented by a different object type.
+
+
+Hide possible types
+Code interpreter log output
+object
+Text output from the Code Interpreter tool call as part of a run step.
+
+
+Hide properties
+index
+integer
+
+The index of the output in the outputs array.
+
+type
+string
+
+Always logs.
+
+logs
+string
+
+The text output from the Code Interpreter tool call.
+
+Code interpreter image output
+object
+
+Hide properties
+index
+integer
+
+The index of the output in the outputs array.
+
+type
+string
+
+Always image.
+
+image
+object
+
+
+Hide properties
+file_id
+string
+
+The file ID of the image.
+
+id
+string
+
+The ID of the tool call.
+
+File search tool call
+object
+
+Hide properties
+file_search
+map
+
+For now, this is always going to be an empty object.
+
+index
+integer
+
+The index of the tool call in the tool calls array.
+
+type
+string
+
+The type of tool call. This is always going to be file_search for this type of tool call.
+
+id
+string
+
+The ID of the tool call object.
+
+Function tool call
+object
+
+Hide properties
+index
+integer
+
+The index of the tool call in the tool calls array.
+
+type
+string
+
+The type of tool call. This is always going to be function for this type of tool call.
+
+function
+object
+
+The definition of the function that was called.
+
+
+Hide properties
+arguments
+string
+
+The arguments passed to the function.
+
+name
+string
+
+The name of the function.
+
+output
+string or null
+
+The output of the function. This will be null if the outputs have not been submitted yet.
+
+id
+string
+
+The ID of the tool call object.
+
+id
+string
+
+The identifier of the run step, which can be referenced in API endpoints.
+
+object
+string
+
+The object type, which is always thread.run.step.delta.
+
+-----
+
+Assistant stream events
+Beta
+Represents an event emitted when streaming a Run.
+
+Each event in a server-sent events stream has an event and data property:
+
+event: thread.created
+data: {"id": "thread_123", "object": "thread", ...}
+We emit events whenever a new object is created, transitions to a new state, or is being streamed in parts (deltas). For example, we emit thread.run.created when a new run is created, thread.run.completed when a run completes, and so on. When an Assistant chooses to create a message during a run, we emit a thread.message.created event, a thread.message.in_progress event, many thread.message.delta events, and finally a thread.message.completed event.
+
+We may add additional events over time, so we recommend handling unknown events gracefully in your code. See the Assistants API quickstart to learn how to integrate the Assistants API with streaming.
+
+done
+data is [DONE]
+
+Occurs when a stream ends.
+
+error
+data is an error
+
+Occurs when an error occurs. This can happen due to an internal server error or a timeout.
+
+thread.created
+data is a thread
+
+Occurs when a new thread is created.
+
+thread.message.completed
+data is a message
+
+Occurs when a message is completed.
+
+thread.message.created
+data is a message
+
+Occurs when a message is created.
+
+thread.message.delta
+data is a message delta
+
+Occurs when parts of a Message are being streamed.
+
+thread.message.in_progress
+data is a message
+
+Occurs when a message moves to an in_progress state.
+
+thread.message.incomplete
+data is a message
+
+Occurs when a message ends before it is completed.
+
+thread.run.cancelled
+data is a run
+
+Occurs when a run is cancelled.
+
+thread.run.cancelling
+data is a run
+
+Occurs when a run moves to a cancelling status.
+
+thread.run.completed
+data is a run
+
+Occurs when a run is completed.
+
+thread.run.created
+data is a run
+
+Occurs when a new run is created.
+
+thread.run.expired
+data is a run
+
+Occurs when a run expires.
+
+thread.run.failed
+data is a run
+
+Occurs when a run fails.
+
+thread.run.in_progress
+data is a run
+
+Occurs when a run moves to an in_progress status.
+
+thread.run.incomplete
+data is a run
+
+Occurs when a run ends with status incomplete.
+
+thread.run.queued
+data is a run
+
+Occurs when a run moves to a queued status.
+
+thread.run.requires_action
+data is a run
+
+Occurs when a run moves to a requires_action status.
+
+thread.run.step.cancelled
+data is a run step
+
+Occurs when a run step is cancelled.
+
+thread.run.step.completed
+data is a run step
+
+Occurs when a run step is completed.
+
+thread.run.step.created
+data is a run step
+
+Occurs when a run step is created.
+
+thread.run.step.delta
+data is a run step delta
+
+Occurs when parts of a run step are being streamed.
+
+thread.run.step.expired
+data is a run step
+
+Occurs when a run step expires.
+
+thread.run.step.failed
+data is a run step
+
+Occurs when a run step fails.
+
+thread.run.step.in_progress
+data is a run step
+
+Occurs when a run step moves to an in_progress state.

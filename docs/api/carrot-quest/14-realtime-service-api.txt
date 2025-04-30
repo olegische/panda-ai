@@ -1,0 +1,451 @@
+Realtime Services API
+Realtime Services API (RTS API) — это один из наших API, который позволяет в реальном времени получать обновления, происходящие в Carrot quest. Этот API используется (в том числе) в наших официальных клиентах и приложениях.
+
+Введение
+Есть три способа подключения:
+
+WebSocket (предпочтительный вариант)
+Long polling (если не получается через WebSocket)
+Short polling (наименее предпочтительный вариант)
+Когда в Carrot quest происходит какая-то активность (например, новое сообщение в диалоге, начало нового диалога пользователем, совершение определенного события и т.д.) мы отправляем уведомление об этом (сообщение) в realtime-сервисы. Таких сообщений может быть достаточно много, поэтому они сгруппированы в каналы.
+
+При подключении нужно указать каналы, на которые вы хотите подписаться. Например, можно подписаться только на канал с уведомлениями о совершении определенного события и канал с уведомлениями о новых диалогах.
+
+Мы используем Nginx Push Stream Module.
+
+Подключение
+URL для подключения формируется следующим образом:
+
+WebSocket:
+
+wss://realtime-services.carrotquest.io/websocket/channel1/channel2?auth_token=XXX
+Long polling:
+
+https://realtime-services.carrotquest.io/longpoll/channel1/channel2?auth_token=XXX
+Short polling:
+
+https://realtime-services.carrotquest.io/shortpoll/channel1/channel2?auth_token=XXX
+На данный момент хост для подключения — realtime-services.carrotquest.io. Протоколы: ws (незашифрованный WebSocket), wss (зашифрованный WebSocket), http (незашифрованный long polling или short polling), https (зашифрованный long polling или short polling).
+
+Далее после слеша идет способ подключения (websocket, longpoll, shortpoll). Таймаут для long poll соединения — 25 секунд.
+
+Затем нужно указать список каналов, на которые вы хотите подписаться. Можно указать несколько каналов, разделив их слешем (но не более 50 каналов в одном соединении).
+
+В конце нужно добавить GET-параметр auth_token. Это тот же самый токен, который используется в Web API (см. раздел авторизация). Можно добавить дополнителльные GET-параметры tag и time (см. раздел "переподключение" ниже).
+
+Сообщения
+После успешного подключения вы будете получать сообщения. Пример такого сообщения:
+
+{
+    "id": 3282,
+    "channel": "user_presence_changed.100",
+    "message": { ... },
+    "tag": "21",
+    "time": "Sat, 14 Nov 2015 15:51:54 GMT"
+}
+id содержит идентификатор сообщения.
+
+channel содержит канал, в который пришло это сообщение.
+
+message это само сообщение.
+
+tag и time нужны для корректного переподключения (см. ниже).
+
+Каналы
+Каналы, на которые вы можете подписаться, используя Realtime Services API.
+
+
+Канал	Описание
+ping	Для контроля целостности соединения
+ping
+{
+    "timestamp": 1440423367.024315
+}
+Каждые 10 секунд в этот канал посылается сообщение с текущим timestamp.
+
+Используется для контроля целостности соединения.
+
+В наших клиентах и приложениях мы показываем уведомление "возможно, интернет-соединение было потеряно", если в течение 60 секунд не получили пинга.
+
+user_presence_changed.{app_id}	Изменился статус пользователя
+user_presence_changed.{app_id}
+[
+    {"user": 8460409, "presence": "idle", "presence_details": {...}}
+]
+Обновился статус пользователя (или presence_details). Стоит отметить, что при поступлении этого сообщения не гарантируется, что предыдущий статус не равен новому.
+
+Содержит массив объектов, в котором три поля:
+
+user содержит ID пользователя
+
+presence это новый статус (online, offline, idle)
+
+presence_details это расширенная информация о статусе
+
+conversation.{app_id}	Начат новый диалог с пользователем
+conversation.{app_id}
+{
+    "id": 6779974,
+    "created": 1449993141,
+    "user": {
+        ...
+    },
+    "read": false,
+    "replied": false,
+    "clicked": false,
+    "unsubscribed": false,
+    "closed": false,
+    "message": 6592,
+    "type": "email",
+    "reply_type": "text",
+    "part_last": {
+        "id": 7493777,
+        "created": 1449993141,
+        "first": true,
+        "conversation": 6779974,
+        "body": "<p>Some message</p>",
+        "read": false,
+        "type": "reply_admin",
+        "sent_via": "message_auto",
+        "from": {
+            "avatar": "https:\/\/files.carrotquest.io\/avatars\/1418112360347-00000100.jpg",
+            "type": "default_admin",
+            "name": "Dmitriy"
+        }
+    },
+    "parts_count": 1,
+    "assignee": null,
+    "unread_parts_count": 1,
+    "last_admin": {
+        "avatar": "https:\/\/files.carrotquest.io\/avatars\/1418112360347-00000100.jpg",
+        "type": "default_admin",
+        "name": "Dmitriy"
+    },
+    "last_update": 1449993141,
+    "tags": []
+}
+В этот канал приходит сообщение при начале нового диалога с пользователем. Сообщение содержит объект Conversation.
+
+Новый диалог может быть инициирован пользователем на сайте или администратором (через ручное или автоматическое сообщение).
+
+Если диалог инициирован администратором (поле message != null), в разделе диалоги он появится только тогда, когда пользователь ответит на него.
+
+Чтобы получать уведомления только о диалогах, которые инициировал пользователь, есть специальный канал conversation_started_user.{app_id}.
+
+conversation.{app_id}.{user_id}	Начат новый диалог с пользователем
+conversation.{app_id}.{user_id}
+{
+    "id": 6779974,
+    "created": 1449993141,
+    "replied": false,
+    "message": 6592,
+    "type": "email",
+    "reply_type": "text",
+    "part_last": {
+        "id": 7493777,
+        "created": 1449993141,
+        "first": true,
+        "conversation": 6779974,
+        "body": "<p>Some message</p>",
+        "read": false,
+        "type": "reply_admin",
+        "sent_via": "message_auto",
+        "from": {
+            "avatar": "https:\/\/files.carrotquest.io\/avatars\/1418112360347-00000100.jpg",
+            "type": "default_admin",
+            "name": "Dmitriy"
+        }
+    },
+    "parts_count": 1,
+    "unread_parts_count": 1,
+    "last_admin": {
+        "avatar": "https:\/\/files.carrotquest.io\/avatars\/1418112360347-00000100.jpg",
+        "type": "default_admin",
+        "name": "Dmitriy"
+    },
+    "last_update": 1449993141
+}
+В этот канал приходит сообщение при начале нового диалога с пользователем {user_id}. Формат сообщения почти такой же, как в канале conversation.{app_id}.
+
+Мы используем этот канал для работы чата на стороне пользователя сайта. Поэтому, есть изменения:
+
+Нет поля user
+Нет полей clicked, unsubscribed, closed, read
+Нет поля assignee
+Счетчик parts_count считает только части, видимые пользователю (его ответы и ответы от администраторов)
+part_last Показывает последнюю видимую пользователю часть (например, если последняя часть в диалоге это внутренняя заметка, то она здесь показана не будет)
+Нет поля tags
+
+conversation_started_user.{app_id}	Пользователь начал новый диалог
+conversation_started_user.{app_id}
+{
+    "id": 6778871,
+    "created": 1449990991,
+    "replied": false,
+    "message": 12931,
+    "type": "popup_chat",
+    "reply_type": "text",
+    "part_last": {
+        "id": 7492603,
+        "created": 1449990991,
+        "first": true,
+        "conversation": 6778871,
+        "body": "<p>Hello from here</p>",
+        "read": false,
+        "type": "reply_admin",
+        "sent_via": "message_manual",
+        "from": {
+            "avatar": "https://files.carrotquest.io/avatars/1418112360347-00000100.jpg",
+            "name": "Dmitriy",
+            "type": "default_admin"
+        }
+    },
+    "parts_count": 1,
+    "last_admin": {
+        "avatar": "https://files.carrotquest.io/avatars/1418112360347-00000100.jpg",
+        "name": "Dmitriy",
+        "type": "default_admin"
+    },
+    "last_update": 1449990991,
+    "unread_parts_count": 1
+}
+В этот канал приходит сообщение, когда пользователь с сайта начинает новый диалог. Сообщение содержит объект Conversation.
+
+Новый диалог может быть инициирован пользователем на сайте или администратором (через ручное или автоматическое сообщение).
+
+Чтобы получать уведомления о всех диалогах (в том числе о диалогах, которые были инициированы администраторами), есть канал conversation.{app_id}.
+
+conversation_reply.{app_id}	Новое сообщение в диалоге
+conversation_reply.{app_id}
+{
+    "id": 7498329,
+    "created": 1449992424,
+    "conversation": 4718671,
+    "body": "Reply test",
+    "type": "reply_user",
+    "sent_via": "web_user",
+    "from": 3181982,
+
+    "random_id": 1650977560,
+    "assignee": {
+        "id": 11946,
+        "name": "Maks",
+        "avatar": "https:\/\/files.carrotquest.io\/avatars\/1446185805093-d6o6rtiq.jpg",
+        "type": "admin"
+    }
+}
+Появилось новое сообщение в диалоге. Сообщение содержит объект ConversationPart.
+
+Для удобства, к стандартному объекту ConversationPart добавляются дополнительные поля:
+
+random_id содержит случайный идентификатор сообщения для контроля целостности отправки
+
+assignee показывает, кому назначен диалог, в котором пришло сообщение. Содержит объект Admin, если диалог назначен на кого-то, либо null, если не назначен
+
+conversation_reply.{app_id}.{user_id}	Новое сообщение в диалоге с пользователем
+conversation_reply.{app_id}.{user_id}
+{
+    "id": 7498329,
+    "created": 1449992424,
+    "conversation": 4718671,
+    "body": "Reply test",
+    "type": "reply_user",
+    "sent_via": "web_user",
+    "from": 3181982,
+
+    "random_id": 1650977560
+}
+Появилось новое сообщение в диалоге с пользователем {user_id}. Формат почти аналогичен каналу conversation_reply.
+
+Мы используем этот канал для работы чата на стороне пользователя сайта. Поэтому, есть изменения:
+
+Нет поля assignee
+
+conversation_typing.{app_id}	Кто-то печатает в диалоге
+conversation_typing.{app_id}
+// Печатает администратор
+{
+    "admin": {
+        "id": 24450,
+        "name": "\u041c\u0430\u043a\u0441",
+        "avatar": "https://files.carrotquest.io/avatars/1446185805093-d6o6rtiq.jpg",
+        "type": "admin"
+    },
+    "conversation": 6778871,
+    "body": "Some text"
+}
+// Печатает пользователь на сайте
+{
+    "user": 3181982,
+    "conversation": 6778871,
+    "body": "Some text"
+}
+В этот канал посылается сообщение "администратор набирает сообщение" или "пользователь набирает сообщение".
+
+Поле conversation содержит ID диалога, в котором печатается сообщение.
+
+Поле body содержит набираемый текст.
+
+Если сообщение набирает администратор, то в поле admin содержится объект Admin. Если сообщение набирает пользователь на сайте, то поле user содержит ID этого пользователя.
+
+После получения этого сообщения, в течение 10 ближайших секунд нужно показывать "пользователь Х печатает ...".
+
+conversation_typing.{app_id}.{user_id}	Кто-то печатает в диалоге с пользователем
+conversation_typing.{app_id}.{user_id}
+// Печатает администратор
+{
+    "admin": {
+        "id": 16362,
+        "name": "Maks",
+        "avatar": "https://files.carrotquest.io/avatars/1446185805093-d6o6rtiq.jpg",
+        "type": "admin"
+    },
+    "conversation": 6778871
+}
+// Печатает пользователь на сайте
+{
+    "user": 3181982,
+    "conversation": 6778871
+}
+В этот канал посылается сообщение "администратор набирает сообщение" или "пользователь набирает сообщение" в диалоге с пользователем {user_id}.
+
+Формат аналогичен каналу conversation_typing.{app_id}, но в сообщении нет поля body (только администраторы могут видеть, что набирает другой администратор или пользователь).
+
+Мы используем этот канал для чата на стороне пользователя на сайте.
+
+conversation_read.{app_id}	Пользователь прочел диалог
+conversation_read.{app_id}
+{
+    "id": 6778871
+}
+Диалог id был прочитан пользователем.
+
+Все части с типом reply_admin в этом диалоге нужно пометить как прочитанные.
+
+Поле id содержит ID диалога.
+
+conversation_read.{app_id}.{user_id}	Пользователь {user_id} прочел диалог
+conversation_read.{app_id}.{user_id}
+{
+    "id": 6778871
+}
+Диалог id был прочитан пользователем.
+
+Все части с типом reply_admin в этом диалоге нужно пометить как прочитанные.
+
+Поле id содержит ID диалога.
+
+Мы используем этот канал на стороне чата пользователя на сайте.
+
+conversation_assigned.{app_id}	Диалог был назначен
+conversation_assigned.{app_id}
+{
+    "conversation": 6770419,
+    "admin": {
+        "id": 24450,
+        "name": "Maks",
+        "avatar": "https://files.carrotquest.io/avatars/1446185805093-d6o6rtiq.jpg",
+        "type": "admin"
+    },
+    "assignee": {
+        "id": 24450,
+        "name": "Maks",
+        "avatar": "https://files.carrotquest.io/avatars/1446185805093-d6o6rtiq.jpg",
+        "type": "admin"
+    }
+}
+Диалог с идентификатором conversation был назначен администратором admin другому администратору assignee.
+
+Если assignee = null то назначение было снято.
+
+Поля admin и assignee это объекты Admin.
+
+conversation_closed.{app_id}	Диалог был закрыт
+conversation_closed.{app_id}
+{
+    "admin": {
+        "id": 7890,
+        "name": "Maks",
+        "avatar": "https://files.carrotquest.io/avatars/1446185805093-d6o6rtiq.jpg",
+        "type": "admin"
+    },
+    "conversation": 6778871
+}
+В этот канал приходит сообщение, когда диалог был закрыт.
+
+Поле conversation содержит ID диалога.
+
+admin администратор, закрывший диалог (объект Admin).
+
+conversation_tag_added.{app_id}	К диалогу добавлен тег
+conversation_tag_added.{app_id}
+{
+    "conversation": 6770419,
+    "tag": "sales",
+    "admin": {
+        "id": 450,
+        "name": "Maks",
+        "avatar": "https://files.carrotquest.io/avatars/1446185805093-d6o6rtiq.jpg", 
+        "type": "admin"
+    }
+}
+К диалогу с идентификатором conversation был добавлен тег tag администратором admin (объект Admin).
+
+conversation_tag_deleted.{app_id}	У диалога удален тег
+conversation_tag_deleted.{app_id}
+{
+    "conversation": 6770419,
+    "tag": "sales",
+    "admin": {
+        "id": 450,
+        "name": "Maks",
+        "avatar": "https://files.carrotquest.io/avatars/1446185805093-d6o6rtiq.jpg", 
+        "type": "admin"
+    }
+}
+У диалога с идентификатором conversation был удален тег tag администратором admin (объект Admin).
+
+user_props_changed.{app_id}.{user_id}	Обновились свойства пользователя
+user_props_changed.{app_id}.{user_id}
+{
+    // Nothing here
+}
+В этот канал посылается сообщение, когда изменяются свойства пользователя.
+
+Сообщение пустое. Чтобы получить свойства, нужно использовать Web API.
+
+event.{app_id}.{user_id}	Пользователь {user_id} совершил событие
+event.{app_id}.{user_id}
+{
+    "id": 127717659,
+    "created": 1450014968,
+    "type": {
+        "id": 7161,
+        "name": "login"
+    },
+    "props": {
+        "App": "CarrotQuest A"
+    }
+}
+Пользователь с ID {user_id} совершил событие. Сообщение содержит объект Event.
+
+Этот канал будет полезен, когда нужно прослушивать события определенного пользователя.
+
+Переподключение
+Подключение не получится держать постоянно. Для long polling и short polling переподключение — это обычное дело. Даже WebSocket-соединение не получится держать вечно. При обрыве соединения или в случае сетевых проблем нужно переподключиться заново.
+
+С момента отключения и до момента следующего подключения пройдет некоторое время. В этот промежуток времени тоже могут прийти сообщения. Чтобы не потерять их, при следующем подключении нужно добавить GET-параметры tag и time.
+
+При подключении по WebSocket, эти параметры берутся из последнего сообщения. При использовании схемы long polling или short polling они находятся в заголовках ETag и Last-Modified соответственно.
+
+Например, если вы используете WebSocket и получили сообщение с параметрами tag и time из примера выше, то следующий запрос будет:
+
+wss://realtime-services.carrotquest.io/websocket/channel1/channel2?auth_token=XXX&tag=21&time=Sat%2C%2014%20Nov%202015%2015%3A51%3A54%20GMT
+Обратите внимание, что параметры tag и time должны быть URL-encoded.
+
+Для тех, кто использует long polling или short polling:
+
+Каждый запрос (кроме первого) обязательно должен включать GET-параметры tag и time от последнего сообщения. Иначе вы пропустите все самое важное, пока идет переподключение
+Возможен случай, когда будет возвращено несколько сообщений. Тогда они будут разделены символами переноса строки (\n)
+Если нет сообщений (или истек таймаут), то будет возвращен ответ с HTTP-статусом 304 (Not Modified)
+Если подключиться не удалось, повторную попытку стоит делать, выдержав небольшой таймаут (20-30 секунд). Потому что be nice.
