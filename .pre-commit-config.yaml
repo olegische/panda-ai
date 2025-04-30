@@ -38,8 +38,4 @@ repos:
       - id: mypy
         args: [--ignore-missing-imports]
 
-  - repo: https://github.com/python-poetry/poetry
-    rev: 2.0.0
-    hooks:
-      - id: poetry-check
-      - id: poetry-lock
+  # We're using uv instead of poetry for package management
