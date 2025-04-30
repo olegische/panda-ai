@@ -2,7 +2,7 @@
 import hashlib
 import hmac
 import json
-from typing import Dict, cast
+from typing import Any, Dict
 
 from fastapi import Header, Request
 
@@ -12,10 +12,10 @@ from src.api.routes.base import BaseRouter
 from src.core.logger import LoggerService
 from src.core.models.errors import AgentError, ValidationError
 from src.mcp_clients.carrot_quest.models import (
+    Conversation,
     ConversationPart,
     Event,
     User,
-    WebhookEvent,
 )
 
 # Define header parameters
@@ -138,30 +138,50 @@ class WebhookRouter(BaseRouter):
         # Parse request data
         try:
             form_data = await request.form()
-            data = {}
 
-            # Parse nested JSON structures with type safety
-            if "user" in form_data:
-                data["user"] = User(**json.loads(str(form_data["user"])))
+            # Create a dictionary with proper typing for all fields
+            webhook_data_dict: Dict[str, Any] = {
+                # Required fields with direct string values
+                "type": str(form_data["type"]),
+                "token": str(form_data["token"]),
+                "user_id": str(form_data["user_id"]),
+            }
+
+            # Parse user object (required field)
+            user_json = json.loads(str(form_data["user"]))
+            webhook_data_dict["user"] = User(**user_json)
+
+            # Optional fields with proper type conversion
+            if "event_name" in form_data:
+                webhook_data_dict["event_name"] = str(form_data["event_name"])
+
+            if "event_id" in form_data:
+                webhook_data_dict["event_id"] = str(form_data["event_id"])
+
+            if "message_id" in form_data:
+                webhook_data_dict["message_id"] = str(form_data["message_id"])
+
+            if "sending_id" in form_data:
+                webhook_data_dict["sending_id"] = str(form_data["sending_id"])
+
+            if "message_name" in form_data:
+                webhook_data_dict["message_name"] = str(form_data["message_name"])
+
+            # Parse optional nested objects with proper models
             if "event" in form_data:
-                data["event"] = Event(**json.loads(str(form_data["event"])))
+                event_json = json.loads(str(form_data["event"]))
+                webhook_data_dict["event"] = Event(**event_json)
+
             if "conversation" in form_data:
-                data["conversation"] = json.loads(str(form_data["conversation"]))
+                conversation_json = json.loads(str(form_data["conversation"]))
+                webhook_data_dict["conversation"] = Conversation(**conversation_json)
+
             if "message" in form_data:
-                data["message"] = ConversationPart(**json.loads(str(form_data["message"])))
+                message_json = json.loads(str(form_data["message"]))
+                webhook_data_dict["message"] = ConversationPart(**message_json)
 
-            # Add non-nested fields as strings
-            data.update({
-                field: str(form_data[field])
-                for field in [
-                    "type", "token", "user_id", "event_name", "event_id",
-                    "message_id", "sending_id", "message_name"
-                ]
-                if field in form_data
-            })
-
-            # Validate with Pydantic model
-            webhook_data = cast(WebhookRequest, WebhookEvent(**data))
+            # Validate entire structure with Pydantic
+            webhook_data = WebhookRequest(**webhook_data_dict)
         except Exception as e:
             self.logger.error(
                 "Invalid request payload",
@@ -288,6 +308,37 @@ class WebhookRouter(BaseRouter):
                         "conversation_id": data.conversation.id,
                         "user_id": data.user_id,
                     },
+                )
+                # Initialize conversation through orchestrator
+                await self.orchestrator.process_message(
+                    conversation_id=data.conversation.id,
+                    user_id=data.user_id,
+                    message="",  # No initial message for conversation start event
+                    context=data.dict(exclude_none=True),
+                )
+                return {"status": "processed"}
+
+            elif data.event_name == "$message_replied":
+                if not data.conversation or not data.conversation.id:
+                    raise ValidationError(
+                        message="Missing conversation data",
+                        field="conversation",
+                    )
+
+                self.logger.info(
+                    "Processing message reply",
+                    extra={
+                        "conversation_id": data.conversation.id,
+                        "user_id": data.user_id,
+                        "message_id": data.message_id,
+                    },
+                )
+                # Process reply through orchestrator
+                await self.orchestrator.process_message(
+                    conversation_id=data.conversation.id,
+                    user_id=data.user_id,
+                    message=data.message.body if data.message else "",
+                    context=data.dict(exclude_none=True),
                 )
                 return {"status": "processed"}
 
