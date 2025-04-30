@@ -1,223 +1,389 @@
-"""Assistant orchestrator for managing conversations and assistants."""
+"""Orchestrator for dynamically creating agents based on event context."""
 import asyncio
-import time
+import json
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, cast
+
+from openai.types.beta.assistant import Assistant
+from openai.types.beta.thread import Thread
+from openai.types.beta.threads.message import Message
+from openai.types.beta.threads.run import Run
 
 from agent.types import AssistantMapping, ProcessingResult
 from core.cache import RedisClient
 from core.logger import LoggerService
-from mcp_clients.carrot_quest import CarrotQuestMCPClient
-from mcp_clients.openai import OpenAIMCPClient
-from neural_network.analyzer import ConversationAnalyzer
+from mcp_clients import CarrotQuestMCPClient, OpenAIMCPClient
+
+from .instructions import (
+    build_support_assistant_instructions,
+    format_context_from_cases,
+    get_analyzer_instructions,
+)
 
 
-class AssistantOrchestrator:
-    """Orchestrates interactions between components."""
+class Orchestrator:
+    """Orchestrates creation and management of AI assistants."""
 
     def __init__(
         self,
+        logger: LoggerService,
         cache: RedisClient,
         carrot_quest: CarrotQuestMCPClient,
         openai: OpenAIMCPClient,
-        analyzer: ConversationAnalyzer,
-        logger: LoggerService,
     ):
         """Initialize orchestrator.
 
         Args:
+            logger: Logger service
             cache: Redis cache client
             carrot_quest: Carrot Quest MCP client
             openai: OpenAI MCP client
-            analyzer: Conversation analyzer
-            logger: Logger service
         """
+        self.logger = logger.get_logger(__name__)
         self.cache = cache
         self.carrot_quest = carrot_quest
         self.openai = openai
-        self.analyzer = analyzer
-        self.logger = logger.get_logger(__name__)
 
-    async def process_message(
-        self, conversation_id: str, user_id: str, message: str, context: Dict[str, Any]
+    async def process_event(
+        self, event_type: str, user_id: str, data: Dict[str, Any]
     ) -> ProcessingResult:
-        """Process incoming message.
+        """Process an incoming event.
 
         Args:
-            conversation_id: Conversation ID
+            event_type: Type of event to process
             user_id: User ID
-            message: Message content
-            context: Additional context
+            data: Event data
 
         Returns:
             Processing result
         """
-        start_time = time.time()
-        self.logger.debug(f"Processing message for conversation {conversation_id}")
-
         try:
-            # Set typing indicator
-            await self.carrot_quest.set_typing(
-                conversation_id=conversation_id, body="Analyzing your message..."
-            )
-
-            # Get or create assistant mapping
-            mapping = await self._get_assistant_mapping(conversation_id)
-
-            if mapping:
-                # Use existing assistant
-                self.logger.debug(f"Using existing assistant {mapping.assistant_id}")
-                result = await self._process_with_existing_assistant(
-                    mapping=mapping, message=message, conversation_id=conversation_id
+            if event_type == "message":
+                return await self._handle_message(user_id, data)
+            elif event_type == "conversation_closed":
+                await self._handle_conversation_closed(data["conversation_id"])
+                return ProcessingResult(
+                    success=True,
+                    response_time=0,
+                    assistant_id="",
+                    thread_id="",
+                    pattern_hash="",
                 )
             else:
-                # Create new assistant
-                self.logger.debug("Creating new assistant")
-                result = await self._process_with_new_assistant(
-                    conversation_id=conversation_id,
-                    user_id=user_id,
-                    message=message,
-                    context=context,
+                self.logger.warning(f"Unhandled event type: {event_type}")
+                return ProcessingResult(
+                    success=False,
+                    response_time=0,
+                    assistant_id="",
+                    thread_id="",
+                    pattern_hash="",
+                    error=f"Unhandled event type: {event_type}",
                 )
 
-            # Update processing time
-            response_time = time.time() - start_time
-
-            # Update assistant stats
-            await self._update_assistant_stats(
-                assistant_id=result.assistant_id,
-                success=result.success,
-                response_time=response_time,
-            )
-
-            return result
-
         except Exception as e:
-            self.logger.error(f"Error processing message: {str(e)}", exc_info=True)
+            self.logger.error(f"Error processing event: {str(e)}", exc_info=True)
             return ProcessingResult(
                 success=False,
-                response_time=time.time() - start_time,
+                response_time=0,
                 assistant_id="",
                 thread_id="",
                 pattern_hash="",
                 error=str(e),
             )
 
-    async def handle_conversation_closed(self, conversation_id: str) -> None:
+    async def _handle_message(
+        self, user_id: str, data: Dict[str, Any]
+    ) -> ProcessingResult:
+        """Handle a new message event.
+
+        Args:
+            user_id: User ID
+            data: Message data
+
+        Returns:
+            Processing result
+        """
+        start_time = datetime.utcnow()
+        conversation_id = data["conversation_id"]
+        message = data["message"]
+
+        # Set typing indicator
+        await self.carrot_quest.set_typing(
+            conversation_id=conversation_id, body="Analyzing your message..."
+        )
+
+        # Analyze conversation context
+        analysis = await self._analyze_conversation(
+            conversation_id=conversation_id,
+            user_id=user_id,
+            message=message,
+            context=data.get("context", {}),
+        )
+
+        # Create or get thread
+        thread = cast(Thread, await self.openai.create_thread())
+        thread_id = thread.id
+
+        # Format context from similar cases
+        context_str = format_context_from_cases(
+            analysis["context_data"]["similar_conversations"]
+        )
+
+        # Build assistant instructions
+        instructions = build_support_assistant_instructions(
+            user_props=analysis["context_data"]["user_properties"],
+            similar_cases=analysis["context_data"]["similar_conversations"],
+            message_type=analysis["context_data"]["pattern_content"]["message_type"],
+        )
+
+        # Create assistant with context
+        assistant = cast(
+            Assistant,
+            await self.openai.create_assistant(
+                model="gpt-4-turbo-preview",
+                name=f"Support Assistant - {user_id}",
+                instructions=instructions,
+                tools=analysis["mcp_tools"],
+                metadata={
+                    "user_id": user_id,
+                    "conversation_id": conversation_id,
+                    "pattern_hash": analysis["pattern_hash"],
+                    "created_at": datetime.utcnow().isoformat(),
+                },
+            ),
+        )
+
+        # Add context message
+        await self.openai.create_message(
+            thread_id=thread_id, role="system", content=context_str
+        )
+
+        # Add user message
+        await self.openai.create_message(
+            thread_id=thread_id, role="user", content=message
+        )
+
+        # Create and start run
+        run = cast(
+            Run,
+            await self.openai.create_run(
+                thread_id=thread_id, assistant_id=assistant.id
+            ),
+        )
+
+        # Update typing message
+        await self.carrot_quest.set_typing(
+            conversation_id=conversation_id, body="Processing your request..."
+        )
+
+        # Wait for run completion and get response with timeout
+        max_retries = 60  # 1 minute timeout
+        retry_count = 0
+
+        while retry_count < max_retries:
+            run_status = cast(
+                Run, await self.openai.get_run(thread_id=thread_id, run_id=run.id)
+            )
+
+            if run_status.status == "completed":
+                # Get assistant's response
+                messages = cast(
+                    Dict[str, List[Message]],
+                    await self.openai.list_messages(thread_id=thread_id, limit=1),
+                )
+                if messages["data"]:
+                    message = messages["data"][0]
+                    response = message.content[0].text.value
+                    # Send response to Carrot Quest
+                    await self.carrot_quest.reply_to_conversation(
+                        conversation_id=conversation_id, body=response
+                    )
+                break
+            elif run_status.status in ["failed", "cancelled", "expired"]:
+                error_msg = f"Run failed with status: {run_status.status}"
+                if run_status.last_error:
+                    error_msg += f" - {run_status.last_error}"
+                self.logger.error(error_msg)
+                raise Exception(error_msg)
+            elif run_status.status == "requires_action":
+                # Handle tool calls
+                tool_calls = run_status.required_action.submit_tool_outputs.tool_calls
+                if tool_calls:
+                    tool_outputs = []
+                    for tool_call in tool_calls:
+                        try:
+                            # Log tool usage
+                            self.logger.info(
+                                f"Processing tool call: {tool_call.function.name} "
+                                f"with args: {tool_call.function.arguments}"
+                            )
+
+                            result = await self._execute_tool(
+                                tool_call.function.name,
+                                json.loads(tool_call.function.arguments),
+                            )
+                            tool_outputs.append(
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps(result),
+                                }
+                            )
+
+                        except Exception as e:
+                            error_msg = (
+                                f"Error executing tool {tool_call.function.name}: "
+                                f"{str(e)}"
+                            )
+                            self.logger.error(error_msg)
+                            tool_outputs.append(
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps({"error": str(e)}),
+                                }
+                            )
+
+                    await self.openai.submit_tool_outputs(
+                        thread_id=thread_id, run_id=run.id, tool_outputs=tool_outputs
+                    )
+
+            retry_count += 1
+            await asyncio.sleep(1)
+
+        if retry_count >= max_retries:
+            error_msg = "Assistant response timeout exceeded"
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
+
+        # Store mapping
+        mapping = AssistantMapping(
+            assistant_id=assistant.id,
+            thread_id=thread_id,
+            pattern_hash=analysis["pattern_hash"],
+            created_at=datetime.utcnow(),
+            last_used=datetime.utcnow(),
+            total_messages=1,
+        )
+        await self._store_mapping(conversation_id, mapping)
+
+        end_time = datetime.utcnow()
+        response_time = (end_time - start_time).total_seconds()
+
+        return ProcessingResult(
+            success=True,
+            response_time=response_time,
+            assistant_id=assistant["id"],
+            thread_id=thread_id,
+            pattern_hash=analysis["pattern_hash"],
+        )
+
+    async def _handle_conversation_closed(self, conversation_id: str) -> None:
         """Handle conversation closed event.
 
         Args:
-            conversation_id: Conversation ID
+            conversation_id: ID of closed conversation
         """
-        self.logger.debug(f"Handling closed conversation {conversation_id}")
+        mapping = await self._get_mapping(conversation_id)
+        if mapping:
+            # Clean up mapping
+            await self._delete_mapping(conversation_id)
 
-        # Get mapping
-        mapping = await self._get_assistant_mapping(conversation_id)
-        if not mapping:
-            return
-
-        # Update assistant metadata
-        metadata = await self.cache.get_assistant_metadata(mapping.assistant_id)
-        if metadata:
-            metadata.last_used = datetime.utcnow()
-            await self.cache.set_assistant_metadata(
-                assistant_id=mapping.assistant_id, metadata=metadata.dict()
-            )
-
-        # Clean up mapping
-        await self.cache.delete(f"conversation:{conversation_id}:mapping")
-
-    async def _get_assistant_mapping(
-        self, conversation_id: str
-    ) -> Optional[AssistantMapping]:
-        """Get assistant mapping for conversation.
-
-        Args:
-            conversation_id: Conversation ID
-
-        Returns:
-            Assistant mapping if exists
-        """
-        mapping_data = await self.cache.get(f"conversation:{conversation_id}:mapping")
-        return AssistantMapping.parse_obj(mapping_data) if mapping_data else None
-
-    async def _store_assistant_mapping(
+    async def _store_mapping(
         self, conversation_id: str, mapping: AssistantMapping
     ) -> None:
         """Store assistant mapping.
 
         Args:
             conversation_id: Conversation ID
-            mapping: Assistant mapping
+            mapping: Assistant mapping to store
         """
         await self.cache.set(f"conversation:{conversation_id}:mapping", mapping.dict())
 
-    async def _process_with_existing_assistant(
-        self, mapping: AssistantMapping, message: str, conversation_id: str
-    ) -> ProcessingResult:
-        """Process message with existing assistant.
+    async def _get_mapping(self, conversation_id: str) -> Optional[AssistantMapping]:
+        """Get assistant mapping.
 
         Args:
-            mapping: Assistant mapping
-            message: Message content
             conversation_id: Conversation ID
 
         Returns:
-            Processing result
+            Assistant mapping if found
         """
-        # Create message in thread
-        await self.openai.create_message(
-            thread_id=mapping.thread_id, role="user", content=message
+        data = await self.cache.get(f"conversation:{conversation_id}:mapping")
+        return AssistantMapping.parse_obj(data) if data else None
+
+    async def _delete_mapping(self, conversation_id: str) -> None:
+        """Delete assistant mapping.
+
+        Args:
+            conversation_id: Conversation ID
+        """
+        await self.cache.delete(f"conversation:{conversation_id}:mapping")
+
+    async def _execute_tool(
+        self, tool_name: str, args: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Execute a tool call from any assistant.
+
+        Args:
+            tool_name: Name of the tool to execute
+            args: Tool arguments
+
+        Returns:
+            Tool execution result
+        """
+        tool_registry = {
+            "get_user_info": self._tool_get_user_info,
+            "get_conversation": self._tool_get_conversation,
+            "get_similar_conversations": self._tool_get_similar_conversations,
+            "update_user_properties": self._tool_update_user_properties,
+            "add_conversation_tags": self._tool_add_conversation_tags,
+        }
+
+        if tool_name not in tool_registry:
+            return {"error": f"Unknown tool: {tool_name}"}
+
+        try:
+            return await tool_registry[tool_name](args)
+        except Exception as e:
+            self.logger.error(f"Error executing tool {tool_name}: {str(e)}")
+            return {"error": str(e)}
+
+    async def _tool_get_user_info(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Get user information from Carrot Quest."""
+        return await self.carrot_quest.get_user(args["user_id"])
+
+    async def _tool_get_conversation(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Get conversation details from Carrot Quest."""
+        return await self.carrot_quest.get_conversation(args["conversation_id"])
+
+    async def _tool_get_similar_conversations(
+        self, args: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Find similar conversations by tags."""
+        conversations = await self.carrot_quest.get_app_conversations(
+            tags=args["tags"], limit=args.get("limit", 5)
         )
+        return {"conversations": conversations}
 
-        # Create and monitor run
-        run = await self.openai.create_run(
-            thread_id=mapping.thread_id, assistant_id=mapping.assistant_id
+    async def _tool_update_user_properties(
+        self, args: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Update user properties in Carrot Quest."""
+        await self.carrot_quest.set_user_props(
+            user_id=args["user_id"], props=args["properties"]
         )
+        return {"success": True}
 
-        # Wait for completion
-        while True:
-            run_status = await self.openai.get_run(
-                thread_id=mapping.thread_id, run_id=run["id"]
-            )
-
-            if run_status["status"] == "completed":
-                # Get assistant's response
-                messages = await self.openai.list_messages(
-                    thread_id=mapping.thread_id, limit=1
-                )
-                if messages["data"]:
-                    response = messages["data"][0]["content"][0]["text"]["value"]
-                    # Send response
-                    await self.carrot_quest.reply_to_conversation(
-                        conversation_id=conversation_id, body=response
-                    )
-                break
-
-            elif run_status["status"] in ["failed", "cancelled"]:
-                raise Exception(
-                    f"Run failed: {run_status.get('last_error', 'Unknown error')}"
-                )
-
-            await asyncio.sleep(1)
-
-        # Update mapping
-        mapping.last_used = datetime.utcnow()
-        mapping.total_messages += 1
-        await self._store_assistant_mapping(conversation_id, mapping)
-
-        return ProcessingResult(
-            success=True,
-            response_time=0,  # Will be updated by caller
-            assistant_id=mapping.assistant_id,
-            thread_id=mapping.thread_id,
-            pattern_hash=mapping.pattern_hash,
+    async def _tool_add_conversation_tags(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Add tags to a conversation in Carrot Quest."""
+        await self.carrot_quest.add_conversation_tags(
+            conversation_id=args["conversation_id"], tags=args["tags"]
         )
+        return {"success": True}
 
-    async def _process_with_new_assistant(
+    async def _analyze_conversation(
         self, conversation_id: str, user_id: str, message: str, context: Dict[str, Any]
-    ) -> ProcessingResult:
-        """Process message with new assistant.
+    ) -> Dict[str, Any]:
+        """Analyze conversation using an OpenAI Assistant.
 
         Args:
             conversation_id: Conversation ID
@@ -226,105 +392,135 @@ class AssistantOrchestrator:
             context: Additional context
 
         Returns:
-            Processing result
+            Analysis result containing pattern hash, tools, and context data
         """
-        # Analyze conversation
-        analysis = await self.analyzer.analyze_conversation(
-            conversation_id=conversation_id,
-            user_id=user_id,
-            message=message,
-            context=context,
+        # Create thread for analysis
+        thread = cast(Thread, await self.openai.create_thread())
+
+        # Create analyzer assistant
+        assistant = cast(
+            Assistant,
+            await self.openai.create_assistant(
+                model="gpt-4-turbo-preview",
+                name="Conversation Analyzer",
+                instructions=get_analyzer_instructions(),
+                tools=[
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "get_user_info",
+                            "description": "Get user information from Carrot Quest",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {"user_id": {"type": "string"}},
+                                "required": ["user_id"],
+                            },
+                        },
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "get_conversation",
+                            "description": "Get conversation details from Carrot Quest",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {"conversation_id": {"type": "string"}},
+                                "required": ["conversation_id"],
+                            },
+                        },
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "get_similar_conversations",
+                            "description": "Find similar conversations by tags",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "tags": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                    "limit": {"type": "integer", "default": 5},
+                                },
+                                "required": ["tags"],
+                            },
+                        },
+                    },
+                ],
+            ),
         )
 
-        # Create assistant
-        assistant = await self.openai.create_assistant(
-            model=analysis["assistant_config"]["model"],
-            name=analysis["assistant_config"]["name"],
-            description=analysis["assistant_config"]["description"],
-            instructions=analysis["assistant_config"]["instructions"],
-            tools=analysis["assistant_config"]["tools"],
-            metadata=analysis["assistant_config"]["metadata"],
+        # Add context and message
+        await self.openai.create_message(
+            thread_id=thread.id,
+            role="user",
+            content=f"""Analyze this conversation:
+User ID: {user_id}
+Conversation ID: {conversation_id}
+Message: {message}
+Context: {json.dumps(context, indent=2)}
+""",
         )
 
-        # Create thread
-        thread = await self.openai.create_thread(
-            messages=[{"role": "user", "content": message}]
-        )
-
-        # Create run
-        run = await self.openai.create_run(
-            thread_id=thread["id"], assistant_id=assistant["id"]
+        # Run analysis
+        run = cast(
+            Run,
+            await self.openai.create_run(
+                thread_id=thread.id, assistant_id=assistant.id
+            ),
         )
 
         # Wait for completion
         while True:
-            run_status = await self.openai.get_run(
-                thread_id=thread["id"], run_id=run["id"]
+            run_status = cast(
+                Run, await self.openai.get_run(thread_id=thread.id, run_id=run.id)
             )
 
-            if run_status["status"] == "completed":
-                # Get assistant's response
-                messages = await self.openai.list_messages(
-                    thread_id=thread["id"], limit=1
+            if run_status.status == "completed":
+                messages = cast(
+                    Dict[str, List[Message]],
+                    await self.openai.list_messages(thread_id=thread.id, limit=1),
                 )
                 if messages["data"]:
-                    response = messages["data"][0]["content"][0]["text"]["value"]
-                    # Send response
-                    await self.carrot_quest.reply_to_conversation(
-                        conversation_id=conversation_id, body=response
-                    )
+                    # Parse analysis result
+                    result = json.loads(messages["data"][0].content[0].text.value)
+                    return result
                 break
-
-            elif run_status["status"] in ["failed", "cancelled"]:
+            elif run_status.status in ["failed", "cancelled", "expired"]:
                 raise Exception(
-                    f"Run failed: {run_status.get('last_error', 'Unknown error')}"
+                    f"Analysis failed: {run_status.last_error or 'Unknown error'}"
                 )
+            elif run_status.status == "requires_action":
+                # Handle tool calls
+                tool_calls = run_status.required_action.submit_tool_outputs.tool_calls
+                if tool_calls:
+                    tool_outputs = []
+                    for tool_call in tool_calls:
+                        try:
+                            result = await self._execute_tool(
+                                tool_call.function.name,
+                                json.loads(tool_call.function.arguments),
+                            )
+                            tool_outputs.append(
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps(result),
+                                }
+                            )
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error executing analyzer tool: {str(e)}"
+                            )
+                            tool_outputs.append(
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps({"error": str(e)}),
+                                }
+                            )
+
+                    await self.openai.submit_tool_outputs(
+                        thread_id=thread.id, run_id=run.id, tool_outputs=tool_outputs
+                    )
 
             await asyncio.sleep(1)
-
-        # Store mapping
-        mapping = AssistantMapping(
-            assistant_id=assistant["id"],
-            thread_id=thread["id"],
-            pattern_hash=analysis["pattern_hash"],
-            created_at=datetime.utcnow(),
-            last_used=datetime.utcnow(),
-            total_messages=1,
-        )
-        await self._store_assistant_mapping(conversation_id, mapping)
-
-        return ProcessingResult(
-            success=True,
-            response_time=0,  # Will be updated by caller
-            assistant_id=assistant["id"],
-            thread_id=thread["id"],
-            pattern_hash=analysis["pattern_hash"],
-        )
-
-    async def _update_assistant_stats(
-        self, assistant_id: str, success: bool, response_time: float
-    ) -> None:
-        """Update assistant statistics.
-
-        Args:
-            assistant_id: Assistant ID
-            success: Whether processing was successful
-            response_time: Processing time in seconds
-        """
-        metadata = await self.cache.get_assistant_metadata(assistant_id)
-        if metadata:
-            metadata.last_used = datetime.utcnow()
-            metadata.total_interactions += 1
-            if success:
-                # Update success rate
-                metadata.success_rate = (
-                    metadata.success_rate * (metadata.total_interactions - 1) + 1
-                ) / metadata.total_interactions
-            # Update average response time
-            metadata.avg_response_time = (
-                metadata.avg_response_time * (metadata.total_interactions - 1)
-                + response_time
-            ) / metadata.total_interactions
-            await self.cache.set_assistant_metadata(
-                assistant_id=assistant_id, metadata=metadata.dict()
-            )
