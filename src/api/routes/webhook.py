@@ -7,7 +7,7 @@ from typing import Any, Dict
 from fastapi import Header, Request
 
 from src.agent import AssistantOrchestrator
-from src.api.models.webhook import WebhookRequest, WebhookResponse
+from src.api.models.webhook import WebhookRequest, WebhookResponse, WebhookStatus
 from src.api.routes.base import BaseRouter
 from src.core.logger import LoggerService
 from src.core.models.errors import AgentError, ValidationError
@@ -16,6 +16,7 @@ from src.mcp_clients.carrot_quest.models import (
     ConversationPart,
     Event,
     User,
+    WebhookType,
 )
 
 # Define header parameters
@@ -142,7 +143,7 @@ class WebhookRouter(BaseRouter):
             # Create a dictionary with proper typing for all fields
             webhook_data_dict: Dict[str, Any] = {
                 # Required fields with direct string values
-                "type": str(form_data["type"]),
+                "type": WebhookType(str(form_data["type"])),
                 "token": str(form_data["token"]),
                 "user_id": str(form_data["user_id"]),
             }
@@ -230,7 +231,7 @@ class WebhookRouter(BaseRouter):
             Response data
         """
         # Handle message webhook events
-        if data.type == "message_webhook":
+        if data.type == WebhookType.MESSAGE:
             if not data.message or not data.message.body:
                 raise ValidationError(
                     message="Missing message data",
@@ -275,10 +276,10 @@ class WebhookRouter(BaseRouter):
                 message=data.message.body,
                 context=data.dict(exclude_none=True),
             )
-            return {"status": "processing"}
+            return {"status": WebhookStatus.PROCESSING}
 
         # Handle event webhook
-        elif data.type == "event":
+        elif data.type == WebhookType.EVENT:
             if not data.event:
                 raise ValidationError(
                     message="Missing event data",
@@ -316,7 +317,7 @@ class WebhookRouter(BaseRouter):
                     message="",  # No initial message for conversation start event
                     context=data.dict(exclude_none=True),
                 )
-                return {"status": "processed"}
+                return {"status": WebhookStatus.PROCESSED}
 
             elif data.event_name == "$message_replied":
                 if not data.conversation or not data.conversation.id:
@@ -340,7 +341,7 @@ class WebhookRouter(BaseRouter):
                     message=data.message.body if data.message else "",
                     context=data.dict(exclude_none=True),
                 )
-                return {"status": "processed"}
+                return {"status": WebhookStatus.PROCESSED}
 
             elif data.event_name == "$conversation_part_group_closed":
                 if not data.conversation or not data.conversation.id:
@@ -356,7 +357,7 @@ class WebhookRouter(BaseRouter):
                     },
                 )
                 await self.orchestrator.handle_conversation_closed(data.conversation.id)
-                return {"status": "processed"}
+                return {"status": WebhookStatus.PROCESSED}
 
             # Log event and return processed status
             self.logger.info(
@@ -367,7 +368,7 @@ class WebhookRouter(BaseRouter):
                     "user_id": data.user_id,
                 },
             )
-            return {"status": "processed"}
+            return {"status": WebhookStatus.PROCESSED}
 
         self.logger.info(
             "Ignoring unsupported event",
@@ -376,4 +377,4 @@ class WebhookRouter(BaseRouter):
                 "event_name": data.event_name,
             },
         )
-        return {"status": "ignored"}
+        return {"status": WebhookStatus.IGNORED}

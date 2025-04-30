@@ -109,18 +109,24 @@ class ConversationPart(BaseModel):
     conversation: str = Field(..., description="Conversation ID")
     part_group: str = Field(..., description="Part group ID")
     body: str = Field(..., description="Message text")
-    body_json: Optional[Dict[str, Any]] = Field(None, description="Message JSON content")
+    body_json: Optional[Dict[str, Any]] = Field(
+        None, description="Message JSON content"
+    )
     direction: Optional[str] = Field(None, description="Message direction (a2u/u2a)")
     type: str = Field(..., description="Message type")
     from_: Optional[Union[str, Admin, MessageSender]] = Field(None, alias="from")
     sent_via: str = Field(..., description="Message sent via")
-    meta_data: Dict[str, Any] = Field(default_factory=dict, description="Additional data")
+    meta_data: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional data"
+    )
     reply_type: str = Field(..., description="Expected reply type")
     actions: Optional[List[Dict[str, Any]]] = Field(None, description="Message actions")
     external_id: Optional[str] = Field(None, description="External message ID")
     read: Optional[bool] = Field(None, description="Is message read")
     first: Optional[bool] = Field(None, description="Is first message")
-    attachments: Optional[List[Attachment]] = Field(None, description="Message attachments")
+    attachments: Optional[List[Attachment]] = Field(
+        None, description="Message attachments"
+    )
     random_id: Optional[str] = Field(None, description="Random ID for frontend")
 
 
@@ -133,12 +139,16 @@ class Channel(BaseModel):
     type: str = Field(..., description="Channel type")
     droppable: Optional[bool] = Field(None, description="Can manually move to channel")
     operators: Optional[List[Admin]] = Field(None, description="Channel operators")
-    not_assigned_count: Optional[int] = Field(None, description="Unassigned dialogs count")
+    not_assigned_count: Optional[int] = Field(
+        None, description="Unassigned dialogs count"
+    )
     not_read_count: Optional[int] = Field(None, description="Unread dialogs count")
     read_permission: Optional[bool] = Field(None, description="Has read permission")
     priority: Optional[int] = Field(None, description="Channel priority")
     auto_set: Optional[bool] = Field(None, description="Auto-assign enabled")
-    auto_set_settings: Optional[Dict[str, Any]] = Field(None, description="Auto-assign settings")
+    auto_set_settings: Optional[Dict[str, Any]] = Field(
+        None, description="Auto-assign settings"
+    )
 
 
 class Conversation(BaseModel):
@@ -168,14 +178,20 @@ class Conversation(BaseModel):
     important: bool = Field(..., description="Is conversation important")
     external_service: Optional[str] = Field(None, description="External service type")
     external_id: Optional[str] = Field(None, description="External conversation ID")
-    last_user_reply_time: Optional[datetime] = Field(None, description="Last user reply time")
+    last_user_reply_time: Optional[datetime] = Field(
+        None, description="Last user reply time"
+    )
     status: Optional[str] = Field(None, description="Message send status")
     assistant_type: Optional[str] = Field(None, description="Assistant type")
     recipient_type: str = Field(..., description="Recipient type")
     user: Optional["User"] = Field(None, description="Conversation user")
     channel: Optional[Channel] = Field(None, description="Conversation channel")
-    part_last: Optional[ConversationPart] = Field(None, description="Last conversation part")
-    important_part_last: Optional[ConversationPart] = Field(None, description="Last important part")
+    part_last: Optional[ConversationPart] = Field(
+        None, description="Last conversation part"
+    )
+    important_part_last: Optional[ConversationPart] = Field(
+        None, description="Last important part"
+    )
     reply_last: Optional[ConversationPart] = Field(None, description="Last reply")
 
 
@@ -225,22 +241,37 @@ class User(BaseModel):
     removed: Optional[datetime] = Field(None, description="Removal timestamp")
     map_url: Optional[str] = Field(None, description="Google Maps location URL")
     props: Optional[Dict[str, Any]] = Field(None, description="System properties")
-    props_custom: Optional[Dict[str, Any]] = Field(None, description="Custom properties")
+    props_custom: Optional[Dict[str, Any]] = Field(
+        None, description="Custom properties"
+    )
     props_events: Optional[Dict[str, Any]] = Field(None, description="Event properties")
-    email_status: Optional[EmailStatus] = Field(None, description="Email subscription status")
+    email_status: Optional[EmailStatus] = Field(
+        None, description="Email subscription status"
+    )
     presence: Optional[PresenceStatus] = Field(None, description="User presence status")
-    presence_details: Optional[Dict[str, Any]] = Field(None, description="Presence details")
+    presence_details: Optional[Dict[str, Any]] = Field(
+        None, description="Presence details"
+    )
     segments: Optional[List[Dict[str, Any]]] = Field(None, description="User segments")
     notes: Optional[List[Note]] = Field(None, description="User notes")
     tags: Optional[List[UserTag]] = Field(None, description="User tags")
     events: Optional[Dict[str, Dict[str, Any]]] = Field(None, description="User events")
-    timezone_offset: Optional[float] = Field(None, description="Timezone offset in minutes")
+    timezone_offset: Optional[float] = Field(
+        None, description="Timezone offset in minutes"
+    )
+
+
+class WebhookType(str, Enum):
+    """Webhook type enumeration."""
+
+    EVENT = "event"
+    MESSAGE = "message_webhook"
 
 
 class WebhookEvent(BaseModel):
     """Base webhook event model."""
 
-    type: str = Field(..., description="Webhook event type")
+    type: WebhookType = Field(..., description="Webhook event type")
     token: str = Field(..., description="Webhook verification token")
     user: User = Field(..., description="User associated with the event")
     user_id: str = Field(..., description="User ID")
