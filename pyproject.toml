@@ -81,6 +81,10 @@ follow_imports = "silent"
 disallow_any_generics = false
 disallow_subclassing_any = false
 cache_dir = ".mypy_cache"
+namespace_packages = false
+explicit_package_bases = false
+mypy_path = ["src"]
+packages = ["src"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
