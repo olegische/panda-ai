@@ -2,12 +2,14 @@
 import hashlib
 import hmac
 import json
-from typing import Any, Dict
+from typing import Dict
+from urllib.parse import parse_qs
 
 from fastapi import Header, Request
 from fastapi.responses import JSONResponse
 
 from src.agent import AssistantOrchestrator
+from src.api.models.webhook import WebhookRequest, WebhookResponse
 from src.api.routes.base import BaseRouter
 from src.core.logger import LoggerService
 from src.core.models.errors import AgentError, ValidationError
@@ -15,35 +17,9 @@ from src.core.models.errors import AgentError, ValidationError
 # Define header parameters
 carrot_signature_header = Header(
     None,
+    alias="X-Carrot-Signature",
     description="Carrot Quest webhook signature for validation",
 )
-
-
-class WebhookValidator:
-    """Validates Carrot Quest webhook signatures."""
-
-    def __init__(self, webhook_secret: str):
-        """Initialize validator.
-
-        Args:
-            webhook_secret: Secret key for webhook validation
-        """
-        self.webhook_secret = webhook_secret
-
-    def validate_signature(self, signature: str, body: bytes) -> bool:
-        """Validate webhook signature.
-
-        Args:
-            signature: Signature from X-Carrot-Signature header
-            body: Raw request body bytes
-
-        Returns:
-            True if signature is valid
-        """
-        expected = hmac.new(
-            self.webhook_secret.encode(), body, hashlib.sha256
-        ).hexdigest()
-        return hmac.compare_digest(signature, expected)
 
 
 class WebhookRouter(BaseRouter):
@@ -65,7 +41,22 @@ class WebhookRouter(BaseRouter):
         super().__init__(logger=logger, tags=["webhook"])
         self.logger = logger.get_logger(__name__)
         self.orchestrator = orchestrator
-        self.validator = WebhookValidator(webhook_secret)
+        self.webhook_secret = webhook_secret
+
+    def validate_signature(self, signature: str, body: bytes) -> bool:
+        """Validate webhook signature.
+
+        Args:
+            signature: Signature from X-Carrot-Signature header
+            body: Raw request body bytes
+
+        Returns:
+            True if signature is valid
+        """
+        expected = hmac.new(
+            self.webhook_secret.encode(), body, hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(signature, expected)
 
     def _setup_routes(self) -> None:
         """Setup router endpoints."""
@@ -73,22 +64,20 @@ class WebhookRouter(BaseRouter):
             "/webhook/carrot-quest",
             self.handle_webhook,
             methods=["POST"],
-            response_model=Dict[str, str],
+            response_model=WebhookResponse,
             summary="Carrot Quest Webhook",
             description="Handle Carrot Quest webhook events.",
             operation_id="handle_carrot_quest_webhook_v1",
             responses={
                 200: {
+                    "model": WebhookResponse,
                     "description": "Webhook processed successfully",
-                    "content": {
-                        "application/json": {"example": {"status": "processing"}}
-                    },
                 },
                 400: {
                     "description": "Invalid request",
                     "content": {
                         "application/json": {
-                            "example": {"detail": "Invalid JSON payload"}
+                            "example": {"detail": "Invalid request payload"}
                         }
                     },
                 },
@@ -105,7 +94,7 @@ class WebhookRouter(BaseRouter):
 
     async def handle_webhook(
         self, request: Request, x_carrot_signature: str = carrot_signature_header
-    ) -> JSONResponse:
+    ) -> WebhookResponse:
         """Handle Carrot Quest webhook.
 
         Args:
@@ -113,7 +102,7 @@ class WebhookRouter(BaseRouter):
             x_carrot_signature: Webhook signature header
 
         Returns:
-            JSON response with processing status
+            WebhookResponse with processing status
         """
         self.logger.debug(
             "Webhook received",
@@ -128,7 +117,7 @@ class WebhookRouter(BaseRouter):
         body = await request.body()
 
         # Validate signature
-        if not self.validator.validate_signature(x_carrot_signature, body):
+        if not self.validate_signature(x_carrot_signature, body):
             self.logger.warning(
                 "Invalid webhook signature",
                 extra={
@@ -142,22 +131,27 @@ class WebhookRouter(BaseRouter):
                 details={"header": "X-Carrot-Signature"},
             )
 
-        # Parse webhook data
+        # Parse form data
         try:
-            data = json.loads(body)
-            event_type = data.get("type")
-            if not event_type:
-                self.logger.warning(
-                    "Missing event type",
-                    extra={
-                        "request_id": getattr(request.state, "request_id", None),
-                        "data": data,
-                    },
-                )
-                raise ValidationError(message="Missing event type", field="type")
-        except json.JSONDecodeError as e:
+            form_data = parse_qs(body.decode())
+            # Convert form data to dict, taking first value from lists
+            data = {k: v[0] if len(v) == 1 else v for k, v in form_data.items()}
+            
+            # Parse nested JSON structures
+            if "user" in data:
+                data["user"] = json.loads(data["user"])
+            if "event" in data:
+                data["event"] = json.loads(data["event"])
+            if "conversation" in data:
+                data["conversation"] = json.loads(data["conversation"])
+            if "message" in data:
+                data["message"] = json.loads(data["message"])
+
+            # Validate with Pydantic model
+            webhook_data = WebhookRequest(**data)
+        except Exception as e:
             self.logger.error(
-                "Invalid JSON payload",
+                "Invalid request payload",
                 extra={
                     "request_id": getattr(request.state, "request_id", None),
                     "body": body.decode(),
@@ -165,16 +159,15 @@ class WebhookRouter(BaseRouter):
                 },
             )
             raise AgentError(
-                code=400, message="Invalid JSON payload", details={"error": str(e)}
+                code=400,
+                message="Invalid request payload",
+                details={"error": str(e)},
             )
 
         # Process event
         try:
-            result = await self.process_event(event_type, data)
-            return JSONResponse(
-                status_code=200,
-                content=result,
-            )
+            result = await self.process_event(webhook_data)
+            return WebhookResponse(**result)
         except AgentError:
             # Re-raise AgentError to be handled by middleware
             raise
@@ -183,7 +176,7 @@ class WebhookRouter(BaseRouter):
                 "Error processing webhook event",
                 extra={
                     "request_id": getattr(request.state, "request_id", None),
-                    "event_type": event_type,
+                    "event_type": webhook_data.type,
                     "error": str(e),
                 },
                 exc_info=True,
@@ -191,84 +184,85 @@ class WebhookRouter(BaseRouter):
             raise AgentError(
                 code=500,
                 message="Error processing webhook event",
-                details={"error": str(e), "event_type": event_type},
+                details={"error": str(e), "event_type": webhook_data.type},
             )
 
-    async def process_event(
-        self, event_type: str, data: Dict[str, Any]
-    ) -> Dict[str, str]:
+    async def process_event(self, data: WebhookRequest) -> Dict[str, str]:
         """Process webhook event.
 
         Args:
-            event_type: Type of webhook event
-            data: Event data
+            data: Validated webhook request data
 
         Returns:
             Response data
         """
-        if event_type == "new_message":
-            # Extract message details
-            conversation_id = data.get("conversation", {}).get("id")
-            user_id = data.get("user", {}).get("id")
-            message = data.get("message", {}).get("body")
-
-            if not all([conversation_id, user_id, message]):
-                self.logger.warning(
-                    "Missing required fields in webhook data",
-                    extra={
-                        "data": data,
-                    },
-                )
-
-                # Determine which field is missing
-                missing_fields = []
-                if not conversation_id:
-                    missing_fields.append("conversation_id")
-                if not user_id:
-                    missing_fields.append("user_id")
-                if not message:
-                    missing_fields.append("message")
-
+        # Handle message webhook events
+        if data.type == "message_webhook":
+            if not data.message or not data.message.body:
                 raise ValidationError(
-                    message="Missing required fields in webhook data",
-                    field=", ".join(missing_fields),
+                    message="Missing message data",
+                    field="message",
                 )
 
             # Process message through orchestrator
             self.logger.info(
-                "Processing new message",
+                "Processing message webhook",
                 extra={
-                    "conversation_id": conversation_id,
-                    "user_id": user_id,
-                    "message_length": len(message),
+                    "message_id": data.message_id,
+                    "message_name": data.message_name,
+                    "user_id": data.user_id,
                 },
             )
             await self.orchestrator.process_message(
-                conversation_id=conversation_id,
-                user_id=user_id,
-                message=message,
-                context=data,
+                conversation_id=data.conversation.id if data.conversation else None,
+                user_id=data.user_id,
+                message=data.message.body,
+                context=data.dict(),
             )
-
             return {"status": "processing"}
 
-        elif event_type == "conversation_closed":
-            # Handle conversation closed event
-            conversation_id = data.get("conversation", {}).get("id")
-            if conversation_id:
+        # Handle event webhooks
+        elif data.type == "event":
+            if data.event_name == "$conversation_user_started":
+                # Handle new conversation
+                if not data.conversation or not data.conversation.id:
+                    raise ValidationError(
+                        message="Missing conversation data",
+                        field="conversation",
+                    )
+
+                self.logger.info(
+                    "Processing new conversation",
+                    extra={
+                        "conversation_id": data.conversation.id,
+                        "user_id": data.user_id,
+                    },
+                )
+                # Add any specific conversation start handling here
+                return {"status": "processed"}
+
+            elif data.event_name == "$conversation_part_group_closed":
+                # Handle conversation closed
+                if not data.conversation or not data.conversation.id:
+                    raise ValidationError(
+                        message="Missing conversation data",
+                        field="conversation",
+                    )
+
                 self.logger.info(
                     "Handling conversation closed event",
                     extra={
-                        "conversation_id": conversation_id,
+                        "conversation_id": data.conversation.id,
                     },
                 )
-                await self.orchestrator.handle_conversation_closed(conversation_id)
-            return {"status": "processed"}
+                await self.orchestrator.handle_conversation_closed(data.conversation.id)
+                return {"status": "processed"}
 
         self.logger.info(
-            "Ignoring unsupported event type",
+            "Ignoring unsupported event",
             extra={
-                "event_type": event_type,
+                "type": data.type,
+                "event_name": data.event_name,
             },
         )
         return {"status": "ignored"}
