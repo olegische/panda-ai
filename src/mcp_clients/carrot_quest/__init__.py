@@ -1,30 +1,24 @@
 """Carrot Quest MCP client package."""
-from src.mcp_clients.carrot_quest.client import CarrotQuestMCPClient
-from src.mcp_clients.carrot_quest.models import (
+from mcp_clients.carrot_quest.client import CarrotQuestMCPClient
+from mcp_clients.carrot_quest.models import (
     Conversation,
+    ConversationPart,
     DeviceType,
-    Message,
-    MessageEvent,
     MessageType,
-    OrderEvent,
     PopupType,
-    ProductEvent,
-    SessionStartEvent,
     User,
     WebhookEvent,
+    WebhookType,
 )
 
 __all__ = [
     "CarrotQuestMCPClient",
     "Conversation",
+    "ConversationPart",
     "DeviceType",
-    "Message",
-    "MessageEvent",
     "MessageType",
-    "OrderEvent",
     "PopupType",
-    "ProductEvent",
-    "SessionStartEvent",
     "User",
     "WebhookEvent",
+    "WebhookType",
 ]

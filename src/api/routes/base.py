@@ -4,7 +4,7 @@ from typing import List
 
 from fastapi import APIRouter
 
-from src.core.logger import LoggerService
+from core.logger import LoggerService
 
 
 class BaseRouter(ABC):

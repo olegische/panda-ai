@@ -4,10 +4,10 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional, cast
 
-from src.core.cache import RedisClient
-from src.core.logger import LoggerService
-from src.core.settings import Settings
-from src.mcp_clients.carrot_quest import CarrotQuestMCPClient
+from core.cache import RedisClient
+from core.logger import LoggerService
+from core.settings import Settings
+from mcp_clients.carrot_quest import CarrotQuestMCPClient
 
 
 class ConversationAnalyzer:

@@ -4,15 +4,16 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from src.mcp_clients.carrot_quest.models import WebhookEvent
+from mcp_clients.carrot_quest.models import WebhookEvent
 
 
 class WebhookStatus(str, Enum):
     """Webhook response status enumeration."""
 
-    PROCESSING = "processing"
-    PROCESSED = "processed"
-    IGNORED = "ignored"
+    ACCEPTED = "accepted"  # Webhook received and validation passed
+    PROCESSING = "processing"  # Processing started (legacy)
+    PROCESSED = "processed"  # Processing completed (legacy)
+    IGNORED = "ignored"  # Event type not supported
 
 
 class WebhookRequest(WebhookEvent):

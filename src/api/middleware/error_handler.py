@@ -6,9 +6,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from src.core.logger import LoggerService
-from src.core.models.errors import AgentError
-from src.core.settings import Settings
+from core.logger import LoggerService
+from core.models.errors import AgentError
+from core.settings import Settings
 
 
 class ErrorResponse:

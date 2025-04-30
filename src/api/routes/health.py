@@ -3,8 +3,8 @@ from typing import Dict
 
 from fastapi import Request
 
-from src.api.routes.base import BaseRouter
-from src.core.logger import LoggerService
+from api.routes.base import BaseRouter
+from core.logger import LoggerService
 
 
 class HealthRouter(BaseRouter):

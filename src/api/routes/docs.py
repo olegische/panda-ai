@@ -6,8 +6,8 @@ from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse
 
-from src.api.routes.base import BaseRouter
-from src.core.logger import LoggerService
+from api.routes.base import BaseRouter
+from core.logger import LoggerService
 
 
 class DocsRouter(BaseRouter):

@@ -1,20 +1,15 @@
 """Assistant orchestrator for managing conversations and assistants."""
-from typing import Dict, Any, Optional
-import time
 import asyncio
+import time
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from src.core.cache import RedisClient
-from src.core.logger import LoggerService
-from src.mcp_clients.carrot_quest import CarrotQuestMCPClient
-from src.mcp_clients.openai import OpenAIMCPClient
-from src.neural_network.analyzer import ConversationAnalyzer
-from src.agent.types import (
-    AssistantConfig,
-    AssistantMapping,
-    ConversationContext,
-    ProcessingResult
-)
+from agent.types import AssistantMapping, ProcessingResult
+from core.cache import RedisClient
+from core.logger import LoggerService
+from mcp_clients.carrot_quest import CarrotQuestMCPClient
+from mcp_clients.openai import OpenAIMCPClient
+from neural_network.analyzer import ConversationAnalyzer
 
 
 class AssistantOrchestrator:
@@ -26,10 +21,10 @@ class AssistantOrchestrator:
         carrot_quest: CarrotQuestMCPClient,
         openai: OpenAIMCPClient,
         analyzer: ConversationAnalyzer,
-        logger: LoggerService
+        logger: LoggerService,
     ):
         """Initialize orchestrator.
-        
+
         Args:
             cache: Redis cache client
             carrot_quest: Carrot Quest MCP client
@@ -44,20 +39,16 @@ class AssistantOrchestrator:
         self.logger = logger.get_logger(__name__)
 
     async def process_message(
-        self,
-        conversation_id: str,
-        user_id: str,
-        message: str,
-        context: Dict[str, Any]
+        self, conversation_id: str, user_id: str, message: str, context: Dict[str, Any]
     ) -> ProcessingResult:
         """Process incoming message.
-        
+
         Args:
             conversation_id: Conversation ID
             user_id: User ID
             message: Message content
             context: Additional context
-            
+
         Returns:
             Processing result
         """
@@ -67,20 +58,17 @@ class AssistantOrchestrator:
         try:
             # Set typing indicator
             await self.carrot_quest.set_typing(
-                conversation_id=conversation_id,
-                body="Analyzing your message..."
+                conversation_id=conversation_id, body="Analyzing your message..."
             )
 
             # Get or create assistant mapping
             mapping = await self._get_assistant_mapping(conversation_id)
-            
+
             if mapping:
                 # Use existing assistant
                 self.logger.debug(f"Using existing assistant {mapping.assistant_id}")
                 result = await self._process_with_existing_assistant(
-                    mapping=mapping,
-                    message=message,
-                    conversation_id=conversation_id
+                    mapping=mapping, message=message, conversation_id=conversation_id
                 )
             else:
                 # Create new assistant
@@ -89,17 +77,17 @@ class AssistantOrchestrator:
                     conversation_id=conversation_id,
                     user_id=user_id,
                     message=message,
-                    context=context
+                    context=context,
                 )
 
             # Update processing time
             response_time = time.time() - start_time
-            
+
             # Update assistant stats
             await self._update_assistant_stats(
                 assistant_id=result.assistant_id,
                 success=result.success,
-                response_time=response_time
+                response_time=response_time,
             )
 
             return result
@@ -112,17 +100,17 @@ class AssistantOrchestrator:
                 assistant_id="",
                 thread_id="",
                 pattern_hash="",
-                error=str(e)
+                error=str(e),
             )
 
     async def handle_conversation_closed(self, conversation_id: str) -> None:
         """Handle conversation closed event.
-        
+
         Args:
             conversation_id: Conversation ID
         """
         self.logger.debug(f"Handling closed conversation {conversation_id}")
-        
+
         # Get mapping
         mapping = await self._get_assistant_mapping(conversation_id)
         if not mapping:
@@ -133,22 +121,20 @@ class AssistantOrchestrator:
         if metadata:
             metadata.last_used = datetime.utcnow()
             await self.cache.set_assistant_metadata(
-                assistant_id=mapping.assistant_id,
-                metadata=metadata.dict()
+                assistant_id=mapping.assistant_id, metadata=metadata.dict()
             )
 
         # Clean up mapping
         await self.cache.delete(f"conversation:{conversation_id}:mapping")
 
     async def _get_assistant_mapping(
-        self,
-        conversation_id: str
+        self, conversation_id: str
     ) -> Optional[AssistantMapping]:
         """Get assistant mapping for conversation.
-        
+
         Args:
             conversation_id: Conversation ID
-            
+
         Returns:
             Assistant mapping if exists
         """
@@ -156,75 +142,63 @@ class AssistantOrchestrator:
         return AssistantMapping.parse_obj(mapping_data) if mapping_data else None
 
     async def _store_assistant_mapping(
-        self,
-        conversation_id: str,
-        mapping: AssistantMapping
+        self, conversation_id: str, mapping: AssistantMapping
     ) -> None:
         """Store assistant mapping.
-        
+
         Args:
             conversation_id: Conversation ID
             mapping: Assistant mapping
         """
-        await self.cache.set(
-            f"conversation:{conversation_id}:mapping",
-            mapping.dict()
-        )
+        await self.cache.set(f"conversation:{conversation_id}:mapping", mapping.dict())
 
     async def _process_with_existing_assistant(
-        self,
-        mapping: AssistantMapping,
-        message: str,
-        conversation_id: str
+        self, mapping: AssistantMapping, message: str, conversation_id: str
     ) -> ProcessingResult:
         """Process message with existing assistant.
-        
+
         Args:
             mapping: Assistant mapping
             message: Message content
             conversation_id: Conversation ID
-            
+
         Returns:
             Processing result
         """
         # Create message in thread
         await self.openai.create_message(
-            thread_id=mapping.thread_id,
-            role="user",
-            content=message
+            thread_id=mapping.thread_id, role="user", content=message
         )
 
         # Create and monitor run
         run = await self.openai.create_run(
-            thread_id=mapping.thread_id,
-            assistant_id=mapping.assistant_id
+            thread_id=mapping.thread_id, assistant_id=mapping.assistant_id
         )
 
         # Wait for completion
         while True:
             run_status = await self.openai.get_run(
-                thread_id=mapping.thread_id,
-                run_id=run["id"]
+                thread_id=mapping.thread_id, run_id=run["id"]
             )
-            
+
             if run_status["status"] == "completed":
                 # Get assistant's response
                 messages = await self.openai.list_messages(
-                    thread_id=mapping.thread_id,
-                    limit=1
+                    thread_id=mapping.thread_id, limit=1
                 )
                 if messages["data"]:
                     response = messages["data"][0]["content"][0]["text"]["value"]
                     # Send response
                     await self.carrot_quest.reply_to_conversation(
-                        conversation_id=conversation_id,
-                        body=response
+                        conversation_id=conversation_id, body=response
                     )
                 break
-                
+
             elif run_status["status"] in ["failed", "cancelled"]:
-                raise Exception(f"Run failed: {run_status.get('last_error', 'Unknown error')}")
-                
+                raise Exception(
+                    f"Run failed: {run_status.get('last_error', 'Unknown error')}"
+                )
+
             await asyncio.sleep(1)
 
         # Update mapping
@@ -237,24 +211,20 @@ class AssistantOrchestrator:
             response_time=0,  # Will be updated by caller
             assistant_id=mapping.assistant_id,
             thread_id=mapping.thread_id,
-            pattern_hash=mapping.pattern_hash
+            pattern_hash=mapping.pattern_hash,
         )
 
     async def _process_with_new_assistant(
-        self,
-        conversation_id: str,
-        user_id: str,
-        message: str,
-        context: Dict[str, Any]
+        self, conversation_id: str, user_id: str, message: str, context: Dict[str, Any]
     ) -> ProcessingResult:
         """Process message with new assistant.
-        
+
         Args:
             conversation_id: Conversation ID
             user_id: User ID
             message: Message content
             context: Additional context
-            
+
         Returns:
             Processing result
         """
@@ -263,7 +233,7 @@ class AssistantOrchestrator:
             conversation_id=conversation_id,
             user_id=user_id,
             message=message,
-            context=context
+            context=context,
         )
 
         # Create assistant
@@ -273,48 +243,43 @@ class AssistantOrchestrator:
             description=analysis["assistant_config"]["description"],
             instructions=analysis["assistant_config"]["instructions"],
             tools=analysis["assistant_config"]["tools"],
-            metadata=analysis["assistant_config"]["metadata"]
+            metadata=analysis["assistant_config"]["metadata"],
         )
 
         # Create thread
         thread = await self.openai.create_thread(
-            messages=[{
-                "role": "user",
-                "content": message
-            }]
+            messages=[{"role": "user", "content": message}]
         )
 
         # Create run
         run = await self.openai.create_run(
-            thread_id=thread["id"],
-            assistant_id=assistant["id"]
+            thread_id=thread["id"], assistant_id=assistant["id"]
         )
 
         # Wait for completion
         while True:
             run_status = await self.openai.get_run(
-                thread_id=thread["id"],
-                run_id=run["id"]
+                thread_id=thread["id"], run_id=run["id"]
             )
-            
+
             if run_status["status"] == "completed":
                 # Get assistant's response
                 messages = await self.openai.list_messages(
-                    thread_id=thread["id"],
-                    limit=1
+                    thread_id=thread["id"], limit=1
                 )
                 if messages["data"]:
                     response = messages["data"][0]["content"][0]["text"]["value"]
                     # Send response
                     await self.carrot_quest.reply_to_conversation(
-                        conversation_id=conversation_id,
-                        body=response
+                        conversation_id=conversation_id, body=response
                     )
                 break
-                
+
             elif run_status["status"] in ["failed", "cancelled"]:
-                raise Exception(f"Run failed: {run_status.get('last_error', 'Unknown error')}")
-                
+                raise Exception(
+                    f"Run failed: {run_status.get('last_error', 'Unknown error')}"
+                )
+
             await asyncio.sleep(1)
 
         # Store mapping
@@ -324,7 +289,7 @@ class AssistantOrchestrator:
             pattern_hash=analysis["pattern_hash"],
             created_at=datetime.utcnow(),
             last_used=datetime.utcnow(),
-            total_messages=1
+            total_messages=1,
         )
         await self._store_assistant_mapping(conversation_id, mapping)
 
@@ -333,17 +298,14 @@ class AssistantOrchestrator:
             response_time=0,  # Will be updated by caller
             assistant_id=assistant["id"],
             thread_id=thread["id"],
-            pattern_hash=analysis["pattern_hash"]
+            pattern_hash=analysis["pattern_hash"],
         )
 
     async def _update_assistant_stats(
-        self,
-        assistant_id: str,
-        success: bool,
-        response_time: float
+        self, assistant_id: str, success: bool, response_time: float
     ) -> None:
         """Update assistant statistics.
-        
+
         Args:
             assistant_id: Assistant ID
             success: Whether processing was successful
@@ -356,15 +318,13 @@ class AssistantOrchestrator:
             if success:
                 # Update success rate
                 metadata.success_rate = (
-                    (metadata.success_rate * (metadata.total_interactions - 1) + 1)
-                    / metadata.total_interactions
-                )
+                    metadata.success_rate * (metadata.total_interactions - 1) + 1
+                ) / metadata.total_interactions
             # Update average response time
             metadata.avg_response_time = (
-                (metadata.avg_response_time * (metadata.total_interactions - 1) + response_time)
-                / metadata.total_interactions
-            )
+                metadata.avg_response_time * (metadata.total_interactions - 1)
+                + response_time
+            ) / metadata.total_interactions
             await self.cache.set_assistant_metadata(
-                assistant_id=assistant_id,
-                metadata=metadata.dict()
+                assistant_id=assistant_id, metadata=metadata.dict()
             )

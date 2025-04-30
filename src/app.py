@@ -7,11 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from src.api.middleware.error_handler import ErrorHandlerMiddleware
-from src.api.routes.docs import DocsRouter
-from src.api.routes.health import HealthRouter
-from src.api.routes.webhook import WebhookRouter
-from src.core.settings import settings as app_settings
+from api.middleware.error_handler import ErrorHandlerMiddleware
+from api.routes.docs import DocsRouter
+from api.routes.health import HealthRouter
+from api.routes.webhook import WebhookRouter
+from core.settings import settings as app_settings
 
 
 class PandaApp(FastAPI):

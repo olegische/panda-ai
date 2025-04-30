@@ -4,7 +4,7 @@ import logging
 import logging.config
 from typing import Any, Dict, Optional
 
-from src.core.config import Settings
+from core.config import Settings
 
 
 class BaseFormatter(logging.Formatter):

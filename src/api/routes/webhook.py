@@ -6,12 +6,12 @@ from typing import Any, Dict
 
 from fastapi import Header, Request
 
-from src.agent import AssistantOrchestrator
-from src.api.models.webhook import WebhookRequest, WebhookResponse, WebhookStatus
-from src.api.routes.base import BaseRouter
-from src.core.logger import LoggerService
-from src.core.models.errors import AgentError, ValidationError
-from src.mcp_clients.carrot_quest.models import (
+from agent import AssistantOrchestrator
+from api.models.webhook import WebhookRequest, WebhookResponse, WebhookStatus
+from api.routes.base import BaseRouter
+from core.logger import LoggerService
+from core.models.errors import AgentError, ValidationError
+from mcp_clients.carrot_quest.models import (
     Conversation,
     ConversationPart,
     Event,
@@ -269,14 +269,14 @@ class WebhookRouter(BaseRouter):
                     field="conversation.id",
                 )
 
-            # Process message
-            await self.orchestrator.process_message(
+            # Start message processing in background
+            _ = self.orchestrator.process_message(
                 conversation_id=conversation_id,
                 user_id=data.user_id,
                 message=data.message.body,
                 context=data.dict(exclude_none=True),
             )
-            return {"status": WebhookStatus.PROCESSING}
+            return {"status": WebhookStatus.ACCEPTED}
 
         # Handle event webhook
         elif data.type == WebhookType.EVENT:
@@ -310,14 +310,14 @@ class WebhookRouter(BaseRouter):
                         "user_id": data.user_id,
                     },
                 )
-                # Initialize conversation through orchestrator
-                await self.orchestrator.process_message(
+                # Start conversation processing in background
+                _ = self.orchestrator.process_message(
                     conversation_id=data.conversation.id,
                     user_id=data.user_id,
                     message="",  # No initial message for conversation start event
                     context=data.dict(exclude_none=True),
                 )
-                return {"status": WebhookStatus.PROCESSED}
+                return {"status": WebhookStatus.ACCEPTED}
 
             elif data.event_name == "$message_replied":
                 if not data.conversation or not data.conversation.id:
@@ -334,14 +334,14 @@ class WebhookRouter(BaseRouter):
                         "message_id": data.message_id,
                     },
                 )
-                # Process reply through orchestrator
-                await self.orchestrator.process_message(
+                # Start reply processing in background
+                _ = self.orchestrator.process_message(
                     conversation_id=data.conversation.id,
                     user_id=data.user_id,
                     message=data.message.body if data.message else "",
                     context=data.dict(exclude_none=True),
                 )
-                return {"status": WebhookStatus.PROCESSED}
+                return {"status": WebhookStatus.ACCEPTED}
 
             elif data.event_name == "$conversation_part_group_closed":
                 if not data.conversation or not data.conversation.id:
@@ -356,15 +356,15 @@ class WebhookRouter(BaseRouter):
                         "conversation_id": data.conversation.id,
                     },
                 )
-                await self.orchestrator.handle_conversation_closed(data.conversation.id)
-                return {"status": WebhookStatus.PROCESSED}
+                _ = self.orchestrator.handle_conversation_closed(data.conversation.id)
+                return {"status": WebhookStatus.ACCEPTED}
 
             # Log event and return processed status
             self.logger.info(
                 "Processing event",
                 extra={
                     "event_name": data.event_name,
-                    "event_data": data.event.dict(exclude_none=True),
+                    "event_data": data.event,
                     "user_id": data.user_id,
                 },
             )

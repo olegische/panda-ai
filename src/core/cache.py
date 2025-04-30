@@ -4,8 +4,8 @@ from typing import Any, Optional, cast
 
 from redis.asyncio import Redis
 
-from src.core.config import Settings
-from src.core.logger import LoggerService
+from core.config import Settings
+from core.logger import LoggerService
 
 
 class RedisClient:

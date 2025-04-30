@@ -82,7 +82,8 @@ disallow_any_generics = false
 disallow_subclassing_any = false
 cache_dir = ".mypy_cache"
 namespace_packages = false
-explicit_package_bases = false
+explicit_package_bases = true
+no_implicit_reexport = true
 mypy_path = ["src"]
 packages = ["src"]
 

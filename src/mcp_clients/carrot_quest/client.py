@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional, cast
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
-from src.core.logger import LoggerService
-from src.core.settings import Settings
-from src.mcp_clients.carrot_quest.models import Conversation, Message, User
+from core.logger import LoggerService
+from core.settings import Settings
+from mcp_clients.carrot_quest.models import Conversation, ConversationPart, User
 
 
 class CarrotQuestMCPClient:
@@ -141,7 +141,7 @@ class CarrotQuestMCPClient:
         from_admin: str = "default_admin",
         type_: str = "reply_admin",
         **kwargs: Dict[str, Any],
-    ) -> Message:
+    ) -> ConversationPart:
         """Reply to a conversation."""
         result = await self.session.call_tool(
             "reply_to_conversation",
@@ -153,7 +153,7 @@ class CarrotQuestMCPClient:
                 **kwargs,
             },
         )
-        return Message(**result)
+        return ConversationPart(**result)
 
     async def set_typing(
         self, conversation_id: str, body: str, from_admin: str = "default_admin"

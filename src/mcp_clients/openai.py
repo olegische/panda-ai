@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional, cast
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
-from src.core.logger import LoggerService
-from src.core.settings import Settings
+from core.logger import LoggerService
+from core.settings import Settings
 
 
 class OpenAIMCPClient:
