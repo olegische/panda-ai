@@ -7,11 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
+from src.api.middleware.error_handler import ErrorHandlerMiddleware
 from src.api.routes.docs import DocsRouter
 from src.api.routes.health import HealthRouter
 from src.api.routes.webhook import WebhookRouter
-from src.core.logger import LoggerService
-from src.core.settings import settings
+from src.core.settings import settings as app_settings
 
 
 class PandaApp(FastAPI):
@@ -32,7 +32,7 @@ class PandaApp(FastAPI):
             title="Panda AI",
             description="""
             # Panda AI API
-            
+
             Panda AI provides an intelligent assistant for Carrot Quest.
             """,
             version="0.1.0",  # Will be updated in configure()
@@ -53,7 +53,7 @@ class PandaApp(FastAPI):
             raise RuntimeError("Application is already configured")
 
         # Update version from settings
-        self.version = settings.VERSION
+        self.version = app_settings.VERSION
 
         if not all(
             [
@@ -81,6 +81,14 @@ class PandaApp(FastAPI):
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
+        )
+
+        # Add middleware in correct order
+        app_logger.info("Adding ErrorHandlerMiddleware")
+        self.add_middleware(
+            ErrorHandlerMiddleware,
+            logger=logger,
+            settings=settings,
         )
 
         # Add routers

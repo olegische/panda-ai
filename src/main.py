@@ -2,14 +2,18 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+import redis.asyncio as redis
 import uvicorn
 from fastapi import FastAPI
 
 from src.agent import AssistantOrchestrator
 from src.app import PandaApp
+from src.core.cache import RedisClient
 from src.core.logger import LoggerService
 from src.core.settings import settings
-from src.utils.redis_client import RedisClient
+from src.mcp_clients.carrot_quest import CarrotQuestMCPClient
+from src.mcp_clients.openai import OpenAIMCPClient
+from src.neural_network.analyzer import ConversationAnalyzer
 
 
 @asynccontextmanager
@@ -55,16 +59,48 @@ def init_app() -> FastAPI:
     app = PandaApp(lifespan=lifespan)
 
     # Set up dependencies
-    logger = LoggerService()
-    redis_client = RedisClient(
+    logger = LoggerService(settings_instance=settings)
+
+    # Create Redis connection
+    redis_connection = redis.Redis(
         host=settings.REDIS_HOST,
         port=settings.REDIS_PORT,
         password=settings.REDIS_PASSWORD,
         db=settings.REDIS_DB,
     )
-    orchestrator = AssistantOrchestrator(
+
+    # Create Redis client
+    redis_client = RedisClient(
+        redis=redis_connection,
         logger=logger,
-        redis_client=redis_client,
+        settings=settings,
+    )
+
+    # Create MCP clients
+    carrot_quest_client = CarrotQuestMCPClient(
+        logger=logger,
+        settings=settings,
+    )
+    openai_client = OpenAIMCPClient(
+        logger=logger,
+        settings=settings,
+    )
+
+    # Create analyzer
+    analyzer = ConversationAnalyzer(
+        logger=logger,
+        settings=settings,
+        cache=redis_client,
+        carrot_quest=carrot_quest_client,
+    )
+
+    # Create orchestrator with all dependencies
+    orchestrator = AssistantOrchestrator(
+        cache=redis_client,
+        carrot_quest=carrot_quest_client,
+        openai=openai_client,
+        analyzer=analyzer,
+        logger=logger,
     )
 
     # Set dependencies on app state

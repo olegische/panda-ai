@@ -36,6 +36,11 @@ repos:
     rev: v1.15.0
     hooks:
       - id: mypy
-        args: [--ignore-missing-imports]
+        args: [--config-file=pyproject.toml, --namespace-packages, --no-site-packages, --explicit-package-bases]
+        additional_dependencies:
+          - "types-redis"
+          - "pydantic>=2.5.2"
+          - "fastapi>=0.110.0"
+        files: ^src/
 
   # We're using uv instead of poetry for package management

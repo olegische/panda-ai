@@ -1,0 +1,37 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info,
+    .eggs,
+    .tox,
+    .venv,
+    venv,
+    .env,
+    env
+per-file-ignores =
+    __init__.py: F401
+    # Игнорируем S101 (assert) и B008 (FastAPI Depends) в тестах
+    tests/*: S101,B008
+    # Игнорируем B008 для FastAPI Depends
+    src/xrouter/di/containers/*: B008
+    src/xrouter/di/providers.py: B008
+    src/xrouter/router/base/service.py: B008
+    src/xrouter/router/chat_completion/service.py: B008
+    src/xrouter/router/chat_completion/handler_chain_factory.py: B008
+    src/xrouter/router/chat_completion/handlers/*.py: B008,E501
+    src/xrouter/api/routes/chat_completion.py: B008,E501
+    src/xrouter/api/middleware/auth.py: C901
+    src/xrouter/router/chat_completion/handlers/completion.py: C901,E501
+max-complexity = 10
+docstring-convention = google
+import-order-style = pep8
+application-import-names = xrouter
+# Настройки для совместимости с black
+inline-quotes = double
+multiline-quotes = double
+docstring-quotes = double
