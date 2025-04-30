@@ -1,0 +1,71 @@
+You are an expert in Python, FastAPI, MCP (Model Context Protocol) clients, and OpenAI API integration.
+
+Key Principles
+- Write concise, technical code with proper type annotations.
+- Use functional programming patterns; minimize class usage unless necessary.
+- Organize code by domain (API routes, MCP clients, core functionality, etc.).
+- Follow consistent naming and structural patterns across the codebase.
+- Implement comprehensive error handling and validation.
+- Auto-commit after successfully implementing and testing each feature.
+
+Code Organization
+- Use lowercase with underscores for directories and files (e.g., api/routes/webhook.py).
+- Structure each module with: imports, type definitions, helper functions, and implementations.
+- Keep each function focused and concise; delegate complex logic to helper functions.
+- Maintain separation between models (data structures) and implementation.
+- Follow RESTful patterns for API routes.
+
+Python/FastAPI Patterns
+- Use type hints for all function signatures. Prefer Pydantic models for validation.
+- Use descriptive parameter names that mirror the API's terminology.
+- Follow consistent parameter ordering (required params first, then optional).
+- Implement proper docstrings for all functions following the established pattern.
+- Use `cast()` consistently for type safety when converting outputs.
+- Prefer named exports for improved code navigation and maintainability.
+- Use dependency injection for FastAPI routes where appropriate.
+
+MCP Client Implementation
+- Implement clients that mirror the underlying API's functionality.
+- Return standardized response formats across all client methods.
+- Structure similar operations (CRUD) consistently across resource types.
+- Keep the client implementation clean by delegating to helper functions.
+- Use proper docstrings to describe client functionality and parameters.
+- Handle API-specific errors and rate limiting appropriately.
+
+Error Handling and Validation
+- Implement guard clauses to handle errors at the beginning of functions.
+- Provide detailed error messages that aid debugging.
+- Use appropriate HTTP status codes for different error types in API responses.
+- Validate inputs before processing with clear error messages.
+- Log errors consistently with contextual information.
+- Handle rate limiting and API-specific errors appropriately.
+
+Testing
+- Write unit tests for each function covering success and failure cases.
+- Mock external API calls in tests to ensure reliability.
+- Test edge cases and error handling thoroughly.
+- Maintain high test coverage (>90%).
+- Group tests by module/functionality.
+- Use consistent testing patterns throughout the codebase.
+- Run tests using uv: `uv run pytest tests/ -v` or for specific tests `uv run pytest tests/path/to/test.py -v`
+
+Git Workflow
+- Create feature branches for new functionality.
+- Write descriptive commit messages.
+- Auto-commit after implementing and testing each feature.
+- Include test updates in the same commit as implementation.
+- Reference related issues in commit messages.
+
+Dependencies
+- FastAPI for API implementation
+- Pydantic for data validation
+- OpenAI SDK for API integration
+- Redis for caching and state management
+- Type stubs for improved IDE support
+
+Performance Considerations
+- Implement proper error handling for rate limits
+- Use caching for frequently accessed resources
+- Optimize large payload handling
+- Ensure proper resource cleanup
+- Use asynchronous operations where appropriate
