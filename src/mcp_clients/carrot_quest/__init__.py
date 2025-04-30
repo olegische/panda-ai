@@ -1,6 +1,6 @@
 """Carrot Quest MCP client package."""
-from mcp_clients.carrot_quest.client import CarrotQuestMCPClient
-from mcp_clients.carrot_quest.models import (
+from .client import CarrotQuestMCPClient
+from .models import (
     Conversation,
     ConversationPart,
     DeviceType,

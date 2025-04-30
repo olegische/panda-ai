@@ -1,6 +1,6 @@
 """Agent package for Panda AI Support."""
-from agent.orchestrator import AssistantOrchestrator
-from agent.types import (
+from .orchestrator import Orchestrator
+from .types import (
     AssistantConfig,
     AssistantMapping,
     AssistantMetadata,
@@ -9,7 +9,7 @@ from agent.types import (
 )
 
 __all__ = [
-    "AssistantOrchestrator",
+    "Orchestrator",
     "AssistantConfig",
     "AssistantMapping",
     "AssistantMetadata",

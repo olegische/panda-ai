@@ -6,7 +6,7 @@ from mcp.client.sse import sse_client
 
 from core.logger import LoggerService
 from core.settings import Settings
-from mcp_clients.carrot_quest.models import Conversation, ConversationPart, User
+from .models import Conversation, ConversationPart, User
 
 
 class CarrotQuestMCPClient:
