@@ -27,6 +27,65 @@ Panda AI Support Agent is an AI-native first-line support system for melonpanda.
 
 ## System Components
 
+### Component Diagram
+```mermaid
+graph TB
+    subgraph External["External Services"]
+        CQ[Carrot Quest API]
+        OAI[OpenAI API]
+    end
+
+    subgraph Main["Main Application Container"]
+        WH[Webhook Handler]
+        AO[Assistant Orchestrator]
+        style WH fill:#f9f,stroke:#333
+        style AO fill:#f9f,stroke:#333
+    end
+
+    subgraph NNA["Neural Network Analyzer Container"]
+        NA[Network Analyzer]
+        PL[Pattern Learning]
+        style NA fill:#bbf,stroke:#333
+        style PL fill:#bbf,stroke:#333
+    end
+
+    subgraph MCP["MCP Servers"]
+        CQMCP[Carrot Quest MCP]
+        OAIMCP[OpenAI MCP]
+        style CQMCP fill:#bfb,stroke:#333
+        style OAIMCP fill:#bfb,stroke:#333
+    end
+
+    subgraph Storage["Storage"]
+        Redis[(Redis)]
+        style Redis fill:#ff9,stroke:#333
+    end
+
+    %% External connections
+    CQMCP <--> CQ
+    OAIMCP <--> OAI
+
+    %% Main app connections
+    WH --> AO
+    AO --> NA
+    AO --> CQMCP
+    AO --> OAIMCP
+    AO <--> Redis
+
+    %% Neural Network connections
+    NA --> PL
+    NA --> CQMCP
+    NA --> OAIMCP
+    PL --> Redis
+
+    %% MCP interconnections
+    CQMCP <--> OAIMCP
+
+    %% Style definitions
+    classDef default fill:#fff,stroke:#333,stroke-width:2px;
+    classDef external fill:#ddd,stroke:#333,stroke-width:2px;
+```
+
 ### 1. Main Application
 - **Purpose**: Handles webhooks and orchestrates interactions between components
 - **Key Responsibilities**:
