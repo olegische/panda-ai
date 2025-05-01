@@ -46,6 +46,7 @@ from .users import (
     StartConversationResponse,
     UnsubscribeEmailResponse,
 )
+from .webhooks import WebhookEvent, WebhookType
 
 __all__ = [
     # Apps models
@@ -90,4 +91,7 @@ __all__ = [
     "SetUserPropsResponse",
     "StartConversationResponse",
     "UnsubscribeEmailResponse",
+    # Webhook models
+    "WebhookEvent",
+    "WebhookType",
 ]
