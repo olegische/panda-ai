@@ -285,6 +285,65 @@ class WebhookEventDispatcher:
             orchestrator=orchestrator,
         )
 
+    async def dispatch_message(self, event: WebhookRequest) -> Dict[str, str]:
+        """Dispatch message webhook event.
+
+        Args:
+            event: Webhook event data
+
+        Returns:
+            Response data with status
+
+        Raises:
+            ValidationError: If event type is not message_webhook
+        """
+        if event.type != WebhookType.MESSAGE:
+            raise ValidationError(
+                message=f"Invalid webhook type. Expected: message_webhook, received: {event.type}",
+                field="type",
+            )
+
+        return await self._handlers[WebhookType.MESSAGE].handle(event)
+
+    async def dispatch_event(self, event: WebhookRequest) -> Dict[str, str]:
+        """Dispatch conversation event webhook.
+
+        Args:
+            event: Webhook event data
+
+        Returns:
+            Response data with status
+
+        Raises:
+            ValidationError: If event type is not event or event data is missing
+        """
+        if event.type != WebhookType.EVENT:
+            raise ValidationError(
+                message=f"Invalid webhook type. Expected: event, received: {event.type}",
+                field="type",
+            )
+
+        if not event.event:
+            raise ValidationError(
+                message="Missing event data",
+                field="event",
+            )
+
+        # Get handler for event name or use default
+        if not event.event_name:
+            raise ValidationError(
+                message="Missing event name",
+                field="event_name",
+            )
+
+        handler = self._handlers.get(
+            event.event_name,
+            self._default_handler,
+        )
+
+        # Handle event
+        return await handler.handle(event)
+
     async def dispatch(self, event: WebhookRequest) -> Dict[str, str]:
         """Dispatch webhook event to appropriate handler.
 
@@ -293,34 +352,20 @@ class WebhookEventDispatcher:
 
         Returns:
             Response data with status
+
+        Raises:
+            ValidationError: If event type is not supported
         """
-        # Handle message webhooks
         if event.type == WebhookType.MESSAGE:
-            return await self._handlers[WebhookType.MESSAGE].handle(event)
-
-        # Handle event webhooks
+            return await self.dispatch_message(event)
         elif event.type == WebhookType.EVENT:
-            if not event.event:
-                raise ValidationError(
-                    message="Missing event data",
-                    field="event",
-                )
-
-            # Get handler for event name or use default
-            handler = self._handlers.get(
-                event.event_name,
-                self._default_handler,
+            return await self.dispatch_event(event)
+        else:
+            self.logger.info(
+                "Ignoring unsupported event",
+                extra={
+                    "type": event.type,
+                    "event_name": event.event_name,
+                },
             )
-
-            # Handle event
-            return await handler.handle(event)
-
-        # Ignore unsupported event types
-        self.logger.info(
-            "Ignoring unsupported event",
-            extra={
-                "type": event.type,
-                "event_name": event.event_name,
-            },
-        )
-        return {"status": WebhookStatus.IGNORED}
+            return {"status": WebhookStatus.IGNORED}

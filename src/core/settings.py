@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "json"  # Доступные форматы: json, text, structured
     LOG_EXTRA_FIELDS: list[str] = []  # Дополнительные поля для логов
 
+    # Carrot Quest
+    CARROT_QUEST_WEBHOOK_TOKEN: str = (
+        ""  # Token from Carrot Quest admin panel for webhook verification
+    )
+
     class Config:
         """Configuration for settings loading."""
 

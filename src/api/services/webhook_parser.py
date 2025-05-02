@@ -1,6 +1,4 @@
 """Webhook request parsing service."""
-import hashlib
-import hmac
 import json
 from typing import Any, Dict
 
@@ -9,6 +7,7 @@ from fastapi import Request
 from api.models import WebhookRequest
 from core.logger import LoggerService
 from core.models.errors import AgentError
+from core.settings import Settings
 from mcp_clients.carrot_quest.models import (
     Conversation,
     ConversationPart,
@@ -21,30 +20,26 @@ from mcp_clients.carrot_quest.models import (
 class WebhookParser:
     """Service for parsing webhook request data."""
 
-    def __init__(self, logger: LoggerService, webhook_secret: str) -> None:
+    def __init__(self, logger: LoggerService, settings: Settings) -> None:
         """Initialize parser.
 
         Args:
             logger: Logger service instance for logging
-            webhook_secret: Secret for validating webhook signatures
+            settings: Application settings
         """
         self.logger = logger.get_logger(__name__)
-        self.webhook_secret = webhook_secret
+        self.settings = settings
 
-    def _validate_signature(self, signature: str, body: bytes) -> bool:
-        """Validate webhook signature.
+    def _validate_token(self, token: str) -> bool:
+        """Validate webhook token.
 
         Args:
-            signature: Signature from X-Carrot-Signature header
-            body: Raw request body bytes
+            token: Token from webhook request
 
         Returns:
-            True if signature is valid
+            True if token matches configured token
         """
-        expected = hmac.new(
-            self.webhook_secret.encode(), body, hashlib.sha256
-        ).hexdigest()
-        return hmac.compare_digest(signature, expected)
+        return token == self.settings.CARROT_QUEST_WEBHOOK_TOKEN
 
     def _parse_required_fields(self, form_data: dict) -> Dict[str, Any]:
         """Parse required fields from form data.
@@ -118,47 +113,30 @@ class WebhookParser:
             AgentError: If request data is invalid
         """
         try:
-            # Get raw body for signature validation
-            body = await request.body()
-
-            # Validate signature
-            signature = request.headers.get("X-Carrot-Signature")
-            if not signature:
-                self.logger.warning(
-                    "Missing webhook signature",
-                    extra={
-                        "request_id": getattr(request.state, "request_id", None),
-                        "client": request.client.host if request.client else None,
-                    },
-                )
-                raise AgentError(
-                    code=401,
-                    message="Missing webhook signature",
-                    details={"header": "X-Carrot-Signature"},
-                )
-
-            if not self._validate_signature(signature, body):
-                self.logger.warning(
-                    "Invalid webhook signature",
-                    extra={
-                        "request_id": getattr(request.state, "request_id", None),
-                        "client": request.client.host if request.client else None,
-                        "signature_length": len(signature),
-                        "body_length": len(body),
-                    },
-                )
-                raise AgentError(
-                    code=401,
-                    message="Invalid webhook signature",
-                    details={"header": "X-Carrot-Signature"},
-                )
-
             # Parse form data
             form_data = await request.form()
 
+            # Parse and validate required fields
+            required_fields = self._parse_required_fields(form_data)
+
+            # Validate webhook token
+            if not self._validate_token(required_fields["token"]):
+                self.logger.warning(
+                    "Invalid webhook token",
+                    extra={
+                        "request_id": getattr(request.state, "request_id", None),
+                        "client": request.client.host if request.client else None,
+                    },
+                )
+                raise AgentError(
+                    code=401,
+                    message="Invalid webhook token",
+                    details={"field": "token"},
+                )
+
             # Build webhook data dictionary
             webhook_data_dict = {}
-            webhook_data_dict.update(self._parse_required_fields(form_data))
+            webhook_data_dict.update(required_fields)
             webhook_data_dict.update(self._parse_optional_fields(form_data))
             webhook_data_dict.update(self._parse_nested_objects(form_data))
 
