@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 from fastapi import Header, Request
 
-from agent import AssistantOrchestrator
+from agent import Orchestrator
 from api.models.webhook import WebhookRequest, WebhookResponse, WebhookStatus
 from api.routes.base import BaseRouter
 from core.logger import LoggerService
@@ -33,7 +33,7 @@ class WebhookRouter(BaseRouter):
     def __init__(
         self,
         logger: LoggerService,
-        orchestrator: AssistantOrchestrator,
+        orchestrator: Orchestrator,
         webhook_secret: str,
     ) -> None:
         """Initialize router.
