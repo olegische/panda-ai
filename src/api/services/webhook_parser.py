@@ -8,13 +8,7 @@ from api.models import WebhookRequest
 from core.logger import LoggerService
 from core.models.errors import AgentError
 from core.settings import Settings
-from mcp_clients.carrot_quest.models import (
-    Conversation,
-    ConversationPart,
-    Event,
-    User,
-    WebhookType,
-)
+from mcp_clients.carrot_quest.models import Event, User, WebhookType
 
 
 class WebhookParser:
@@ -90,14 +84,6 @@ class WebhookParser:
         nested_objects = {}
         if "event" in form_data:
             nested_objects["event"] = Event(**json.loads(str(form_data["event"])))
-        if "conversation" in form_data:
-            nested_objects["conversation"] = Conversation(
-                **json.loads(str(form_data["conversation"]))
-            )
-        if "message" in form_data:
-            nested_objects["message"] = ConversationPart(
-                **json.loads(str(form_data["message"]))
-            )
         return nested_objects
 
     async def parse_request(self, request: Request) -> WebhookRequest:

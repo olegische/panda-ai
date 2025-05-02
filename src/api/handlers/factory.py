@@ -3,14 +3,10 @@ from agent.orchestrator import Orchestrator
 from api.models import WebhookRequest
 from core.logger import LoggerService
 from core.models.errors import ValidationError
-from mcp_clients.carrot_quest.models import WebhookType
+from mcp_clients.carrot_quest.models import ConversationEventType, WebhookType
 
 from .base import BaseEventHandler
-from .conversation import (
-    ConversationClosedHandler,
-    ConversationStartedHandler,
-    MessageRepliedHandler,
-)
+from .conversation import ConversationEventHandler
 from .default import DefaultEventHandler
 from .message import MessageWebhookHandler
 
@@ -63,23 +59,15 @@ class HandlerFactory:
                     field="event_name",
                 )
 
-            # Create handler based on event name
-            if event.event_name == "$conversation_user_started":
-                return ConversationStartedHandler(
+            # Check if event_name is one of the communication events
+            try:
+                ConversationEventType(event.event_name)
+                return ConversationEventHandler(
                     logger=self.logger,
                     orchestrator=orchestrator,
                 )
-            elif event.event_name == "$message_replied":
-                return MessageRepliedHandler(
-                    logger=self.logger,
-                    orchestrator=orchestrator,
-                )
-            elif event.event_name == "$conversation_part_group_closed":
-                return ConversationClosedHandler(
-                    logger=self.logger,
-                    orchestrator=orchestrator,
-                )
-            else:
+            except ValueError:
+                # If event_name is not in CommunicationEventType enum
                 return DefaultEventHandler(
                     logger=self.logger,
                     orchestrator=orchestrator,

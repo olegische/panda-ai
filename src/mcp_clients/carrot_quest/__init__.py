@@ -2,6 +2,7 @@
 from .client import CarrotQuestMCPClient
 from .models import (
     Conversation,
+    ConversationEventType,
     ConversationPart,
     DeviceType,
     MessageType,
@@ -14,6 +15,7 @@ from .models import (
 __all__ = [
     "CarrotQuestMCPClient",
     "Conversation",
+    "ConversationEventType",
     "ConversationPart",
     "DeviceType",
     "MessageType",
