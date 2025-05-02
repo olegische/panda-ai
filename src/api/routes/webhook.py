@@ -7,7 +7,7 @@ from typing import Any, Dict
 from fastapi import Header, Request
 
 from agent import Orchestrator
-from api.models.webhook import WebhookRequest, WebhookResponse, WebhookStatus
+from api.models import WebhookRequest, WebhookResponse, WebhookStatus
 from api.routes.base import BaseRouter
 from core.logger import LoggerService
 from core.models.errors import AgentError, ValidationError
