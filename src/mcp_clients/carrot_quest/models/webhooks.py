@@ -4,7 +4,7 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from .common import Conversation, ConversationPart, User
+from .objects import Conversation, ConversationPart, User
 
 
 class WebhookType(str, Enum):

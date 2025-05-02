@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Literal
 
 from pydantic import BaseModel, Field
 
-from .common import Channel, Conversation, ResponseMeta, User
+from .objects import Channel, Conversation, ResponseMeta, User
 
 
 class UserListItem(BaseModel):
