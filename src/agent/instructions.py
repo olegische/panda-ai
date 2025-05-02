@@ -1,95 +1,101 @@
-"""Instructions for AI assistants."""
-from typing import Any, Dict, List
+"""Instructions for the meta-orchestrator."""
+from typing import List
+
+# Core capabilities description
+TOOL_DESCRIPTIONS = {
+    "carrot_quest": {
+        "get_conversation": "Get conversation details",
+        "get_similar_conversations": "Find similar conversations by tags",
+        "reply_to_conversation": "Send a response in a conversation",
+        "set_typing": "Set typing indicator",
+        "add_conversation_tags": "Add tags to a conversation",
+        "set_user_props": "Update user properties",
+    },
+    "openai_assistant": {
+        "create_assistant": "Create a new assistant with specific instructions and tools",
+        "create_thread": "Create a new thread",
+        "create_message": "Add a message to a thread",
+        "create_run": "Start a run with an assistant",
+        "get_run": "Check run status",
+        "list_messages": "Get messages from a thread",
+        "submit_tool_outputs": "Submit outputs for tool calls",
+    },
+}
+
+# Core responsibilities
+RESPONSIBILITIES = [
+    "Analyze incoming webhook events and their context",
+    "Choose appropriate models for assistants based on:",
+    "  - Task complexity (use more capable models for complex tasks)",
+    "  - Context length requirements",
+    "  - Model capabilities",
+    "Create assistants with appropriate:",
+    "  - Selected model",
+    "  - Instructions",
+    "  - Tools (only give each assistant the tools it needs)",
+    "  - Metadata",
+    "Manage the conversation flow between assistants",
+    "Ensure proper handling of all events",
+]
+
+# Key principles
+PRINCIPLES = [
+    "You have complete flexibility in how to handle events",
+    "You can create multiple assistants with different roles",
+    "Each assistant should only get the tools it needs",
+    "You can create new assistants based on other assistants' results",
+    "Choose models wisely - match model capabilities to task requirements",
+    "Focus on providing the best user experience",
+]
+
+# Important reminders
+REMINDERS = [
+    "The webhook event already contains user information",
+    "You can create assistants with specialized functions",
+    "Chain assistants together when needed",
+    "Always ensure proper error handling",
+    "Consider model capabilities when assigning tasks",
+]
+
+# Input description
+INPUT_DESCRIPTION = [
+    "1. Event context - details about the event to process",
+    "2. Available models - list of OpenAI models you can use for assistants",
+    "3. Available tools - tools that can be given to assistants",
+]
 
 
-def build_support_assistant_instructions(
-    user_props: Dict[str, Any], similar_cases: List[Dict[str, Any]], message_type: str
-) -> str:
-    """Build customized instructions for the support assistant.
+def format_tool_descriptions() -> str:
+    """Format tool descriptions into readable text."""
+    text = []
+    for category, tools in TOOL_DESCRIPTIONS.items():
+        text.append(f"\n{category.replace('_', ' ').title()} MCP Client tools:")
+        for name, desc in tools.items():
+            text.append(f"- {name}: {desc}")
+    return "\n".join(text)
 
-    Args:
-        user_props: User properties from Carrot Quest
-        similar_cases: Similar previous cases
-        message_type: Type of message being handled
+
+def format_section(title: str, items: List[str]) -> str:
+    """Format a section of instructions."""
+    return f"\n{title}:\n" + "\n".join(items)
+
+
+def get_orchestrator_instructions() -> str:
+    """Get instructions for the meta-orchestrator model.
 
     Returns:
-        Customized instruction string
+        Core instructions for the orchestrator model
     """
-    base_instructions = [
-        "You are a support assistant for melonpanda.com.",
-        "Provide clear, accurate, and helpful responses.",
-        "Use previous case resolutions as guidance when relevant.",
-        "When using tools, always explain what you're doing to help the user.",
-        "If you need more information, ask clear and specific questions.",
-        "Keep responses concise but complete.",
-        "If you can't help with something, explain why and suggest alternatives.",
+    sections = [
+        "You are an AI meta-orchestrator for melonpanda.com support system.",
+        "\nYour role is to analyze incoming events and dynamically create and manage AI assistants to handle them.",
+        "\nYou have access to the following tools:",
+        format_tool_descriptions(),
+        "\nYou will receive:",
+        "\n".join(INPUT_DESCRIPTION),
+        format_section("Your responsibilities", RESPONSIBILITIES),
+        format_section("Key principles", PRINCIPLES),
+        format_section("Remember", REMINDERS),
     ]
 
-    # Add user-specific instructions
-    if user_props.get("premium"):
-        base_instructions.append("This is a premium user - provide priority support.")
-    if user_props.get("language"):
-        base_instructions.append(f"Communicate in {user_props['language']}.")
-
-    # Add type-specific instructions
-    type_instructions = {
-        "question": "Focus on providing clear, direct answers with examples when helpful.",
-        "support_request": "Gather necessary information and provide step-by-step solutions.",
-        "feedback": "Acknowledge the feedback and provide constructive responses.",
-        "general": "Maintain a helpful and professional tone while addressing the user's needs.",
-    }
-    base_instructions.append(
-        type_instructions.get(message_type, type_instructions["general"])
-    )
-
-    return "\n".join(base_instructions)
-
-
-def get_analyzer_instructions() -> str:
-    """Get instructions for the conversation analyzer assistant.
-
-    Returns:
-        Instruction string
-    """
-    instructions = [
-        "You are an AI conversation analyzer for melonpanda.com support system.",
-        "",
-        "Your task is to:",
-        "1. Analyze the conversation context and message",
-        "2. Determine the type of inquiry",
-        "3. Identify relevant tools needed",
-        "4. Find similar conversation patterns",
-        "5. Generate a unique pattern hash",
-        "6. Provide analysis results in a structured format",
-        "",
-        "Use available tools to:",
-        "- Retrieve user information",
-        "- Find similar conversations",
-        "- Access conversation history",
-        "- Analyze patterns",
-        "",
-        "Return results as a JSON object with:",
-        "- pattern_hash: SHA-256 hash of identified pattern",
-        "- mcp_tools: List of required MCP tools",
-        "- context_data: Dictionary with user properties, similar conversations, and pattern content",
-    ]
-    return "\n".join(instructions)
-
-
-def format_context_from_cases(cases: List[Dict[str, Any]]) -> str:
-    """Format previous cases into context for the assistant.
-
-    Args:
-        cases: List of similar cases with their resolutions
-
-    Returns:
-        Formatted context string
-    """
-    return "\n\n".join(
-        [
-            f"Previous Case:\nUser Question: {case.get('message', '')}\n"
-            f"Resolution: {case.get('resolution', '')}\n"
-            f"Tags: {', '.join(case.get('tags', []))}"
-            for case in cases
-        ]
-    )
+    return "\n".join(sections)

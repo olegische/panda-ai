@@ -55,6 +55,12 @@ class Settings(BaseSettings):
         ""  # Token from Carrot Quest admin panel for webhook verification
     )
 
+    # OpenAI
+    OPENAI_API_KEY: str = ""  # OpenAI API key
+    OPENAI_ORG_ID: str = ""  # OpenAI organization ID
+    ORCHESTRATOR_MODEL: str = "gpt-4-turbo-preview"  # Model for meta-orchestrator
+    OPENAI_MODELS_CACHE_TTL: int = 3600  # 1 hour - cache TTL for available models list
+
     class Config:
         """Configuration for settings loading."""
 
