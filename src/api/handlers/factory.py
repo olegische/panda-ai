@@ -29,11 +29,14 @@ class HandlerFactory:
         """
         self.logger = logger
 
-    def create(self, event: WebhookRequest, orchestrator: Orchestrator) -> BaseEventHandler:
+    def create(
+        self, event: WebhookRequest, orchestrator: Orchestrator
+    ) -> BaseEventHandler:
         """Create appropriate handler for webhook event.
 
         Args:
             event: Webhook event data
+            orchestrator: Assistant orchestrator instance
 
         Returns:
             Handler instance for the event
