@@ -110,7 +110,7 @@ class MessageWebhookHandler(BaseEventHandler):
             conversation_id=event.conversation.id,
             user_id=event.user_id,
             message=event.message.body,
-            context=event.dict(exclude_none=True),
+            context=event.model_dump(exclude_none=True),
         )
         return {"status": WebhookStatus.ACCEPTED}
 
@@ -142,7 +142,7 @@ class ConversationStartedHandler(BaseEventHandler):
             conversation_id=event.conversation.id,
             user_id=event.user_id,
             message="",  # No initial message for conversation start event
-            context=event.dict(exclude_none=True),
+            context=event.model_dump(exclude_none=True),
         )
         return {"status": WebhookStatus.ACCEPTED}
 
@@ -175,7 +175,7 @@ class MessageRepliedHandler(BaseEventHandler):
             conversation_id=event.conversation.id,
             user_id=event.user_id,
             message=event.message.body if event.message else "",
-            context=event.dict(exclude_none=True),
+            context=event.model_dump(exclude_none=True),
         )
         return {"status": WebhookStatus.ACCEPTED}
 
