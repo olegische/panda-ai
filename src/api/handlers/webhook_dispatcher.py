@@ -5,7 +5,7 @@ from agent.orchestrator import Orchestrator
 from api.models import WebhookRequest
 from core.logger import LoggerService
 
-from .handler_factory import HandlerFactory
+from .factory import HandlerFactory
 
 
 class WebhookEventDispatcher:
@@ -23,7 +23,8 @@ class WebhookEventDispatcher:
             orchestrator: Assistant orchestrator instance
         """
         self.logger = logger.get_logger(__name__)
-        self.factory = HandlerFactory(logger=logger, orchestrator=orchestrator)
+        self.orchestrator = orchestrator
+        self.factory = HandlerFactory(logger=logger)
 
     async def dispatch(self, event: WebhookRequest) -> Dict[str, str]:
         """Dispatch webhook event to appropriate handler.
@@ -34,5 +35,5 @@ class WebhookEventDispatcher:
         Returns:
             Response data with status
         """
-        handler = self.factory.create(event)
+        handler = self.factory.create(event, orchestrator=self.orchestrator)
         return await handler.handle(event)
