@@ -17,12 +17,14 @@ class WebhookRouter(BaseRouter):
         self,
         logger: LoggerService,
         orchestrator: Orchestrator,
+        webhook_secret: str,
     ) -> None:
         """Initialize router.
 
         Args:
             logger: Logger service instance
             orchestrator: Assistant orchestrator instance
+            webhook_secret: Secret for webhook validation
         """
         super().__init__(logger=logger, tags=["webhook"])
         self.logger = logger.get_logger(__name__)
@@ -30,7 +32,10 @@ class WebhookRouter(BaseRouter):
             logger=logger,
             orchestrator=orchestrator,
         )
-        self.webhook_parser = WebhookParser(logger=logger)
+        self.webhook_parser = WebhookParser(
+            logger=logger,
+            webhook_secret=webhook_secret,
+        )
 
     def _setup_routes(self) -> None:
         """Setup router endpoints."""
