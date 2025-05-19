@@ -6,11 +6,11 @@ import redis.asyncio as redis
 import uvicorn
 from fastapi import FastAPI
 
-from agent import AssistantOrchestrator
 from app import PandaApp
 from core.cache import RedisClient
 from core.logger import LoggerService
 from core.settings import settings
+from dreamer import AssistantOrchestrator
 from mcp_clients.carrot_quest import CarrotQuestMCPClient
 from mcp_clients.openai import OpenAIMCPClient
 from neural_network.analyzer import ConversationAnalyzer

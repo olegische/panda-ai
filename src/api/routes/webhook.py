@@ -1,14 +1,14 @@
 """Webhook router implementation for Carrot Quest events."""
 from fastapi import Request
 
-from agent import Orchestrator
-from api.handlers.webhook import WebhookEventDispatcher
+from api.handlers import WebhookEventDispatcher
 from api.models import WebhookResponse
 from api.routes.base import BaseRouter
 from api.services.webhook_parser import WebhookParser
 from core.logger import LoggerService
 from core.models.errors import AgentError
 from core.settings import Settings
+from dreamer import Orchestrator
 from mcp_clients.carrot_quest.models import WebhookType
 
 

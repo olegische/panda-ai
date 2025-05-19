@@ -1,8 +1,8 @@
 """Factory for creating webhook handlers."""
-from agent.orchestrator import Orchestrator
 from api.models import WebhookRequest
 from core.logger import LoggerService
 from core.models.errors import ValidationError
+from dreamer.orchestrator import Orchestrator
 from mcp_clients.carrot_quest.models import ConversationEventType, WebhookType
 
 from .base import BaseEventHandler

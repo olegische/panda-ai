@@ -7,9 +7,9 @@ from typing import Any, Dict, List, Optional
 from openai import AsyncOpenAI
 from openai.types.beta.threads.run import Run
 
-from agent.types import ProcessingResult
 from core.cache import RedisClient
 from core.logger import LoggerService
+from dreamer.types import ProcessingResult
 from mcp_clients import CarrotQuestMCPClient, OpenAIMCPClient
 
 from .instructions import get_orchestrator_instructions

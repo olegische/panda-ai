@@ -1,22 +1,17 @@
 """Webhook handlers package."""
-from .base_handler import BaseEventHandler
-from .conversation_handlers import (
-    ConversationClosedHandler,
-    ConversationStartedHandler,
-    MessageRepliedHandler,
-)
-from .default_handler import DefaultEventHandler
-from .handler_factory import HandlerFactory
-from .message_handlers import MessageWebhookHandler
-from .webhook import WebhookEventDispatcher
+
+from .base import BaseEventHandler
+from .conversation import ConversationEventHandler
+from .default import DefaultEventHandler
+from .factory import HandlerFactory
+from .message import MessageWebhookHandler
+from .webhook_dispatcher import WebhookEventDispatcher
 
 __all__ = [
     "BaseEventHandler",
-    "ConversationClosedHandler",
-    "ConversationStartedHandler",
+    "ConversationEventHandler",
     "DefaultEventHandler",
     "HandlerFactory",
-    "MessageRepliedHandler",
     "MessageWebhookHandler",
     "WebhookEventDispatcher",
 ]

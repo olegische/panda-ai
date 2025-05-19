@@ -1,9 +1,9 @@
 """Webhook event dispatcher implementation."""
 from typing import Dict
 
-from agent.orchestrator import Orchestrator
 from api.models import WebhookRequest
 from core.logger import LoggerService
+from dreamer.orchestrator import Orchestrator
 
 from .factory import HandlerFactory
 
