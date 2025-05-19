@@ -186,17 +186,21 @@ graph TD
 
 ## Example: End-to-End Dreamer Flow
 
+In a typical deployment, the user interacts with the system via an abstract chat UI (web, mobile, or embedded). The chat UI sends user messages to a chat backend (via webhook or direct API call). The chat backend then passes the user's request to the Dreamer system for agentic reasoning and execution.
+
 ```mermaid
 sequenceDiagram
     participant User
-    participant MCP
+    participant ChatUI as Chat UI
+    participant ChatBE as Chat Backend
     participant Dreamer
     participant LLM
     participant PF as PocketFlow
     participant RC as ReasoningCache
 
-    User->>MCP: Submit Task
-    MCP->>Dreamer: Forward Task
+    User->>ChatUI: Enter message / task
+    ChatUI->>ChatBE: Send webhook/API call
+    ChatBE->>Dreamer: Forward user request
     Dreamer->>LLM: Plan and Decompose
     LLM->>Dreamer: Agent Creation Plan (tool_calls)
     Dreamer->>PF: Build Agent Graph
@@ -205,8 +209,9 @@ sequenceDiagram
     Agents->>PF: Return Results
     PF->>LLM: Aggregate Results
     LLM->>Dreamer: Final Output
-    Dreamer->>MCP: Return Result
-    MCP->>User: Deliver Result
+    Dreamer->>ChatBE: Return Result
+    ChatBE->>ChatUI: Deliver Result
+    ChatUI->>User: Display Response
 ```
 
 ---
