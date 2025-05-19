@@ -3,7 +3,7 @@ from typing import Dict
 
 from api.models import WebhookRequest, WebhookStatus
 
-from .base_handler import BaseEventHandler
+from .base import BaseEventHandler
 
 
 class DefaultEventHandler(BaseEventHandler):
