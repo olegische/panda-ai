@@ -4,14 +4,15 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from .objects import User
+from .objects import ConversationPart, User
 
 
 class WebhookType(str, Enum):
     """Webhook type enumeration."""
 
     EVENT = "event"
-    MESSAGE = "message_webhook"
+    TRIGGER = "message_webhook"  # Renamed from MESSAGE to TRIGGER for clarity
+    CONVERSATION = "conversation"
 
 
 class ConversationEventType(str, Enum):
@@ -83,4 +84,9 @@ class WebhookEvent(BaseModel):
     )
     message_name: Optional[str] = Field(
         None, description="Message name (for type=message_webhook)"
+    )
+
+    # Fields for conversation type webhooks (chat messages)
+    conversation: Optional[ConversationPart] = Field(
+        None, description="Conversation part data (for type=conversation)"
     )

@@ -41,14 +41,82 @@ class WebhookRouter(BaseRouter):
 
     def _setup_routes(self) -> None:
         """Setup router endpoints."""
-        # Conversation events endpoint
+        # Event webhook endpoint
+        self.router.add_api_route(
+            "/webhook/carrot-quest/events",
+            self.handle_event_webhook,
+            methods=["POST"],
+            response_model=WebhookResponse,
+            summary="Carrot Quest Event Webhooks",
+            description="Handle Carrot Quest event webhooks (type=event).",
+            operation_id="handle_carrot_quest_event_webhook_v1",
+            responses={
+                200: {
+                    "model": WebhookResponse,
+                    "description": "Webhook processed successfully",
+                },
+                400: {
+                    "description": "Invalid request",
+                    "content": {
+                        "application/json": {
+                            "example": {"detail": "Invalid request payload"}
+                        }
+                    },
+                },
+                401: {
+                    "description": "Unauthorized",
+                    "content": {
+                        "application/json": {
+                            "example": {"detail": "Invalid webhook token"}
+                        }
+                    },
+                },
+            },
+        )
+
+        # Trigger events endpoint
+        self.router.add_api_route(
+            "/webhook/carrot-quest/triggers",
+            self.handle_trigger_webhook,
+            methods=["POST"],
+            response_model=WebhookResponse,
+            summary="Carrot Quest Trigger Events",
+            description="Handle Carrot Quest trigger events (type=message_webhook).",
+            operation_id="handle_carrot_quest_trigger_webhook_v1",
+            responses={
+                200: {
+                    "model": WebhookResponse,
+                    "description": "Webhook processed successfully",
+                },
+                400: {
+                    "description": "Invalid request",
+                    "content": {
+                        "application/json": {
+                            "example": {"detail": "Invalid request payload"}
+                        }
+                    },
+                },
+                401: {
+                    "description": "Unauthorized",
+                    "content": {
+                        "application/json": {
+                            "example": {"detail": "Invalid webhook token"}
+                        }
+                    },
+                },
+            },
+        )
+
+        # Conversation webhook endpoint
         self.router.add_api_route(
             "/webhook/carrot-quest/conversations",
             self.handle_conversation_webhook,
             methods=["POST"],
             response_model=WebhookResponse,
-            summary="Carrot Quest Conversation Events",
-            description="Handle Carrot Quest conversation events (type=event).",
+            summary="Carrot Quest Conversation Messages",
+            description=(
+                "Handle Carrot Quest conversation messages (type=conversation)."
+            ),
             operation_id="handle_carrot_quest_conversation_webhook_v1",
             responses={
                 200: {
@@ -74,38 +142,59 @@ class WebhookRouter(BaseRouter):
             },
         )
 
-        # Message events endpoint
-        self.router.add_api_route(
-            "/webhook/carrot-quest/messages",
-            self.handle_message_webhook,
-            methods=["POST"],
-            response_model=WebhookResponse,
-            summary="Carrot Quest Message Events",
-            description="Handle Carrot Quest message events (type=message_webhook).",
-            operation_id="handle_carrot_quest_message_webhook_v1",
-            responses={
-                200: {
-                    "model": WebhookResponse,
-                    "description": "Webhook processed successfully",
-                },
-                400: {
-                    "description": "Invalid request",
-                    "content": {
-                        "application/json": {
-                            "example": {"detail": "Invalid request payload"}
-                        }
-                    },
-                },
-                401: {
-                    "description": "Unauthorized",
-                    "content": {
-                        "application/json": {
-                            "example": {"detail": "Invalid webhook token"}
-                        }
-                    },
-                },
+    async def handle_event_webhook(self, request: Request) -> WebhookResponse:
+        """Handle Carrot Quest event webhook.
+
+        Args:
+            request: FastAPI request object
+
+        Returns:
+            WebhookResponse with processing status
+
+        Raises:
+            AgentError: If webhook type is not 'event'
+        """
+        self.logger.debug(
+            "Event webhook received",
+            extra={
+                "request_id": getattr(request.state, "request_id", None),
+                "client": request.client.host if request.client else None,
+                "headers": dict(request.headers),
             },
         )
+
+        # Parse and validate request data
+        webhook_data = await self.webhook_parser.parse_request(request)
+
+        # Verify this is an event webhook
+        if webhook_data.type != WebhookType.EVENT:
+            raise AgentError(
+                code=400,
+                message="Invalid webhook type",
+                details={"expected": "event", "received": webhook_data.type},
+            )
+
+        # Process event webhook
+        try:
+            result = await self.event_dispatcher.dispatch(webhook_data)
+            return WebhookResponse(**result)
+        except AgentError:
+            raise
+        except Exception as e:
+            self.logger.error(
+                "Error processing event webhook",
+                extra={
+                    "request_id": getattr(request.state, "request_id", None),
+                    "event_type": webhook_data.type,
+                    "error": str(e),
+                },
+                exc_info=True,
+            )
+            raise AgentError(
+                code=500,
+                message="Error processing event webhook",
+                details={"error": str(e), "event_type": webhook_data.type},
+            )
 
     async def handle_conversation_webhook(self, request: Request) -> WebhookResponse:
         """Handle Carrot Quest conversation webhook.
@@ -117,7 +206,7 @@ class WebhookRouter(BaseRouter):
             WebhookResponse with processing status
 
         Raises:
-            AgentError: If webhook type is not 'event'
+            AgentError: If webhook type is not 'conversation'
         """
         self.logger.debug(
             "Conversation webhook received",
@@ -131,23 +220,23 @@ class WebhookRouter(BaseRouter):
         # Parse and validate request data
         webhook_data = await self.webhook_parser.parse_request(request)
 
-        # Verify this is a conversation event
-        if webhook_data.type != WebhookType.EVENT:
+        # Verify this is a conversation webhook
+        if webhook_data.type != WebhookType.CONVERSATION:
             raise AgentError(
                 code=400,
                 message="Invalid webhook type",
-                details={"expected": "event", "received": webhook_data.type},
+                details={"expected": "conversation", "received": webhook_data.type},
             )
 
-        # Process conversation event
+        # Process conversation webhook
         try:
-            result = await self.event_dispatcher.dispatch_event(webhook_data)
+            result = await self.event_dispatcher.dispatch(webhook_data)
             return WebhookResponse(**result)
         except AgentError:
             raise
         except Exception as e:
             self.logger.error(
-                "Error processing conversation event",
+                "Error processing conversation webhook",
                 extra={
                     "request_id": getattr(request.state, "request_id", None),
                     "event_type": webhook_data.type,
@@ -157,12 +246,12 @@ class WebhookRouter(BaseRouter):
             )
             raise AgentError(
                 code=500,
-                message="Error processing conversation event",
+                message="Error processing conversation webhook",
                 details={"error": str(e), "event_type": webhook_data.type},
             )
 
-    async def handle_message_webhook(self, request: Request) -> WebhookResponse:
-        """Handle Carrot Quest message webhook.
+    async def handle_trigger_webhook(self, request: Request) -> WebhookResponse:
+        """Handle Carrot Quest trigger webhook.
 
         Args:
             request: FastAPI request object
@@ -171,10 +260,10 @@ class WebhookRouter(BaseRouter):
             WebhookResponse with processing status
 
         Raises:
-            AgentError: If webhook type is not 'message_webhook'
+            AgentError: If webhook type is not 'trigger'
         """
         self.logger.debug(
-            "Message webhook received",
+            "Trigger webhook received",
             extra={
                 "request_id": getattr(request.state, "request_id", None),
                 "client": request.client.host if request.client else None,
@@ -185,24 +274,24 @@ class WebhookRouter(BaseRouter):
         # Parse and validate request data
         webhook_data = await self.webhook_parser.parse_request(request)
 
-        # Verify this is a message webhook
-        if webhook_data.type != WebhookType.MESSAGE:
+        # Verify this is a trigger webhook
+        if webhook_data.type != WebhookType.TRIGGER:
             raise AgentError(
                 code=400,
                 message="Invalid webhook type",
-                details={"expected": "message_webhook", "received": webhook_data.type},
+                details={"expected": "trigger", "received": webhook_data.type},
             )
 
-        # Process message webhook
+        # Process trigger webhook
         try:
-            result = await self.event_dispatcher.dispatch_message(webhook_data)
+            result = await self.event_dispatcher.dispatch(webhook_data)
             return WebhookResponse(**result)
         except AgentError:
             # Re-raise AgentError to be handled by middleware
             raise
         except Exception as e:
             self.logger.error(
-                "Error processing message webhook",
+                "Error processing trigger webhook",
                 extra={
                     "request_id": getattr(request.state, "request_id", None),
                     "event_type": webhook_data.type,
@@ -212,6 +301,6 @@ class WebhookRouter(BaseRouter):
             )
             raise AgentError(
                 code=500,
-                message="Error processing message webhook",
+                message="Error processing trigger webhook",
                 details={"error": str(e), "event_type": webhook_data.type},
             )

@@ -4,7 +4,7 @@ from .base import BaseEventHandler
 from .conversation import ConversationEventHandler
 from .default import DefaultEventHandler
 from .factory import HandlerFactory
-from .message import MessageWebhookHandler
+from .trigger import TriggerWebhookHandler
 from .webhook_dispatcher import WebhookEventDispatcher
 
 __all__ = [
@@ -12,6 +12,6 @@ __all__ = [
     "ConversationEventHandler",
     "DefaultEventHandler",
     "HandlerFactory",
-    "MessageWebhookHandler",
+    "TriggerWebhookHandler",
     "WebhookEventDispatcher",
 ]

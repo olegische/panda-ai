@@ -3,12 +3,12 @@ from api.models import WebhookRequest
 from core.logger import LoggerService
 from core.models.errors import ValidationError
 from dreamer.orchestrator import Orchestrator
-from mcp_clients.carrot_quest.models import ConversationEventType, WebhookType
+from mcp_clients.carrot_quest.models import WebhookType
 
 from .base import BaseEventHandler
 from .conversation import ConversationEventHandler
 from .default import DefaultEventHandler
-from .message import MessageWebhookHandler
+from .trigger import TriggerWebhookHandler
 
 
 class HandlerFactory:
@@ -40,8 +40,20 @@ class HandlerFactory:
         Raises:
             ValidationError: If event type is not supported or event data is invalid
         """
-        if event.type == WebhookType.MESSAGE:
-            return MessageWebhookHandler(
+        if event.type == WebhookType.TRIGGER:
+            return TriggerWebhookHandler(
+                logger=self.logger,
+                orchestrator=orchestrator,
+            )
+
+        if event.type == WebhookType.CONVERSATION:
+            if not event.conversation:
+                raise ValidationError(
+                    message="Missing conversation data",
+                    field="conversation",
+                )
+
+            return ConversationEventHandler(
                 logger=self.logger,
                 orchestrator=orchestrator,
             )
@@ -59,19 +71,11 @@ class HandlerFactory:
                     field="event_name",
                 )
 
-            # Check if event_name is one of the communication events
-            try:
-                ConversationEventType(event.event_name)
-                return ConversationEventHandler(
-                    logger=self.logger,
-                    orchestrator=orchestrator,
-                )
-            except ValueError:
-                # If event_name is not in CommunicationEventType enum
-                return DefaultEventHandler(
-                    logger=self.logger,
-                    orchestrator=orchestrator,
-                )
+            # Use DefaultEventHandler for all event types
+            return DefaultEventHandler(
+                logger=self.logger,
+                orchestrator=orchestrator,
+            )
 
         raise ValidationError(
             message=f"Unsupported webhook type: {event.type}",
