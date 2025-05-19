@@ -1,5 +1,5 @@
 """Agent package for Panda AI Support."""
-from .orchestrator import Orchestrator
+from .orchestrator_legacy import Orchestrator
 from .types import (
     AssistantConfig,
     AssistantMapping,

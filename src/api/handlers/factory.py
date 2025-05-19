@@ -2,7 +2,7 @@
 from api.models import WebhookRequest
 from core.logger import LoggerService
 from core.models.errors import ValidationError
-from dreamer.orchestrator import Orchestrator
+from dreamer.orchestrator_legacy import Orchestrator
 from mcp_clients.carrot_quest.models import WebhookType
 
 from .base import BaseEventHandler

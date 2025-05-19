@@ -3,7 +3,7 @@ from typing import Dict
 
 from api.models import WebhookRequest
 from core.logger import LoggerService
-from dreamer.orchestrator import Orchestrator
+from dreamer.orchestrator_legacy import Orchestrator
 
 from .factory import HandlerFactory
 
