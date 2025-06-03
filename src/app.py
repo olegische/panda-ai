@@ -10,7 +10,7 @@ from starlette.exceptions import HTTPException
 from api.middleware.error_handler import ErrorHandlerMiddleware
 from api.routes.docs import DocsRouter
 from api.routes.health import HealthRouter
-from api.routes.webhook import WebhookRouter
+from api.routes.message import MessageRouter
 from core.settings import settings as app_settings
 
 
@@ -44,8 +44,7 @@ class PandaApp(FastAPI):
         # Dependencies will be set later
         self.state.logger = None
         self.state.settings = None
-        self.state.redis_client = None
-        self.state.orchestrator = None
+        # self.state.redis_client = None
 
     def configure(self) -> None:
         """Configure middleware and routes after dependencies are set."""
@@ -59,8 +58,7 @@ class PandaApp(FastAPI):
             [
                 self.state.logger,
                 self.state.settings,
-                self.state.redis_client,
-                self.state.orchestrator,
+                # self.state.redis_client,
             ]
         ):
             raise RuntimeError("Dependencies must be set before configuring the app.")
@@ -68,7 +66,6 @@ class PandaApp(FastAPI):
         app_logger = self.state.logger.get_logger(__name__)
         logger = self.state.logger
         settings = self.state.settings
-        orchestrator = self.state.orchestrator
 
         # Configure CORS middleware
         app_logger.info(
@@ -101,13 +98,12 @@ class PandaApp(FastAPI):
         docs_router.register_custom_openapi(self)
         self.include_router(docs_router.router)
 
-        app_logger.info("Registering WebhookRouter")
-        webhook_router = WebhookRouter(
+        app_logger.info("Registering MessageRouter")
+        message_router = MessageRouter(
             logger=logger,
-            orchestrator=orchestrator,
-            webhook_secret=settings.WEBHOOK_SECRET,
+            settings=settings,
         )
-        self.include_router(webhook_router.router)
+        self.include_router(message_router.router)
 
         # Add global exception handlers
         app_logger.info("Registering global exception handlers")

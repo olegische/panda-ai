@@ -1,7 +1,7 @@
 [project]
-name = "panda-ai-support"
+name = "panda-dreamer"
 version = "0.1.0"
-description = "AI-native support agent for melonpanda.com using Carrot Quest and OpenAI Assistant API"
+description = "AI-native agent for melonpanda.com using Carrot Quest and OpenAI Assistant API"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -10,12 +10,12 @@ authors = [
 keywords = ["ai", "support", "carrot-quest", "openai", "mcp"]
 dependencies = [
     "mcp[cli]",
+    "pocketflow<=0.0.2",
     "fastapi>=0.110.0,<1.0.0",
     "uvicorn>=0.27.1,<1.0.0",
     "pydantic>=2.5.2,<3.0.0",
     "pydantic-settings>=2.1.0,<3.0.0",
     "httpx==0.27.2",
-    "dependency-injector>=4.45.0,<5.0.0",
     "redis>=5.0.0",  # For user-assistant mapping storage
     "sseclient-py==1.8.0",  # For SSE communication with containers
     "openai>=1.18.0"

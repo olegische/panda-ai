@@ -1,217 +1,40 @@
 """Common Pydantic models for Carrot Quest API."""
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class AdminType(str, Enum):
-    """Admin type enumeration."""
-
-    ADMIN = "admin"
-    BOT = "bot"
-
-
-class MessageType(str, Enum):
-    """Message type enumeration."""
-
-    AUTO = "auto"
-    MANUAL = "manual"
-
-
-class PopupType(str, Enum):
-    """Popup type enumeration."""
-
-    POPUP_CHAT = "popup_chat"
-    POPUP_BIG = "popup_big"
-    POPUP_SMALL = "popup_small"
-    EMAIL = "email"
-    BLOCK_POPUP_SMALL = "block_popup_small"
-    BLOCK_POPUP_BIG = "block_popup_big"
-    LEAD_BOT = "lead_bot"
-    ROUTING_BOT = "routing_bot"
-    PUSH = "push"
-    SDK_PUSH = "sdk_push"
-
-
-class DeviceType(str, Enum):
-    """Device type enumeration."""
-
-    PC = "pc"
-    MOBILE = "mobile"
-    TABLET = "tablet"
-
-
-class EmailStatusEnum(str, Enum):
-    """Email status enumeration."""
-
-    VALIDATION = "validation"
-    NOT_VALID = "not_valid"
-    NOT_CONFIRMED = "not_confirmed"
-    CONFIRMED = "confirmed"
-    BOUNCED = "bounced"
-    SPAM = "spam"
-    UNSUBSCRIBED = "unsubscribed"
-    BLACK_LIST = "black_list"
-
-
-class ChannelType(str, Enum):
-    """Channel type enumeration."""
-
-    EMAIL = "email"
-    MOBILE = "mobile"
-    MANUAL = "manual"
-    VK = "vk"
-    FACEBOOK = "facebook"
-    INSTAGRAM = "instagram"
-    TELEGRAM = "telegram"
-    YANDEX_DIALOGS = "yandex_dialogs"
-    VIBER = "viber"
-    WHATSAPP = "whatsapp"
-
-
-class ConversationType(str, Enum):
-    """Conversation type enumeration."""
-
-    EMAIL = "email"
-    INCOMING_EMAIL = "incoming_email"
-    POPUP_SMALL = "popup_small"
-    POPUP_BIG = "popup_big"
-    BLOCK_POPUP_SMALL = "block_popup_small"
-    BLOCK_POPUP_BIG = "block_popup_big"
-    POPUP_CHAT = "popup_chat"
-    LEAD_BOT = "lead_bot"
-    ROUTING_BOT = "routing_bot"
-    PUSH = "push"
-    SDK_PUSH = "sdk_push"
-
-
-class ConversationPartType(str, Enum):
-    """Conversation part type enumeration."""
-
-    REPLY_USER = "reply_user"
-    REPLY_ADMIN = "reply_admin"
-    AUTO_REPLY = "auto_reply"
-    NOTE = "note"
-    TAG_ADDED = "tag_added"
-    TAG_DELETED = "tag_deleted"
-    ASSIGNED = "assigned"
-    CLOSED = "closed"
-    FINAL_CLOSED = "final_closed"
-    DELAYED = "delayed"
-    CHANNEL_CHANGED = "channel_changed"
-    VOTE = "vote"
-    ARTICLE = "article"
-    CHAT_BOT_ADMIN = "chat_bot_admin"
-    CHAT_BOT_USER = "chat_bot_user"
-    SERVICE = "service"
-
-
-class SentViaType(str, Enum):
-    """Message sending method enumeration."""
-
-    WEB_USER = "web_user"
-    EMAIL_USER = "email_user"
-    WEB_PANEL = "web_panel"
-    EMAIL_ADMIN = "email_admin"
-    APP_ANDROID = "app_android"
-    APP_IOS = "app_ios"
-    APP_CHROME = "app_chrome"
-    APP_DESKTOP = "app_desktop"
-    MESSAGE_AUTO = "message_auto"
-    MESSAGE_MANUAL = "message_manual"
-    MESSAGE_CHAT_BOT = "message_chat_bot"
-    API = "api"
-    INTEGRATIONS = "integrations"
-    SYSTEM = "system"
-    AUTO_REPLY = "auto_reply"
-
-
-class DirectionType(str, Enum):
-    """Message direction enumeration."""
-
-    ADMIN_TO_USER = "a2u"
-    USER_TO_ADMIN = "u2a"
-
-
-class ReplyType(str, Enum):
-    """Reply type enumeration."""
-
-    TEXT = "text"
-    EMAIL = "email"
-    PHONE = "phone"
-    PUSH = "push"
-    BUTTON = "button"
-    NO = "no"
-
-
-class MessageStatus(str, Enum):
-    """Message sending status enumeration."""
-
-    CREATED = "created"
-    RENDERED = "rendered"
-    SENT = "sent"
-    ACCEPTED = "accepted"
-    DELIVERED = "delivered"
-    BOUNCED = "bounced"
-    COMPLAINED = "complained"
-    DROPPED = "dropped"
-    ERROR = "error"
-
-
-class AssistantType(str, Enum):
-    """Assistant type enumeration."""
-
-    DIALOGFLOW = "dialogflow"
-    YANDEX_AI = "yandex_ai"
-    LEAD_BOT = "lead_bot"
-    ROUTING_BOT = "routing_bot"
-    FACEBOOK_BOT = "facebook_bot"
-    TELEGRAM_BOT = "telegram_bot"
-    WIDGET_BOT = "widget_bot"
-
-
-class RecipientType(str, Enum):
-    """Message recipient type enumeration."""
-
-    ALL = "all"
-    WEB = "web"
-    SDK = "sdk"
-
-
-class PresenceStatus(str, Enum):
-    """User presence status enumeration."""
-
-    ONLINE = "online"
-    IDLE = "idle"
-    OFFLINE = "offline"
-
-
 class MessageSender(BaseModel):
     """Message sender model."""
 
-    id: int = Field(..., description="Unique sender identifier")
+    id: Optional[int] = Field(None, description="Unique sender identifier")
     name: str = Field(..., description="Sender name")
-    email_name: str = Field(..., description="Email address prefix (before @)")
-    is_default: bool = Field(..., description="Whether this is the default sender")
-    is_removed: bool = Field(..., description="Whether sender is soft-deleted")
-    is_bot: bool = Field(..., description="Whether sender is a bot")
+    email_name: Optional[str] = Field(
+        None, description="Email address prefix (before @)"
+    )
+    is_default: Optional[bool] = Field(
+        None, description="Whether this is the default sender"
+    )
+    is_removed: Optional[bool] = Field(
+        None, description="Whether sender is soft-deleted"
+    )
+    is_bot: Optional[bool] = Field(None, description="Whether sender is a bot")
     avatar: str = Field(..., description="URL to sender's avatar")
-    type: Literal["message_sender"] = Field(
+    type: Literal["message_sender", "default_admin"] = Field(
         "message_sender",
-        description="Always 'message_sender' for compatibility with Admin",
+        description="Sender type",
     )
 
 
 class Admin(BaseModel):
     """Administrator or operator model."""
 
-    id: int = Field(..., description="Unique administrator identifier")
+    id: Optional[int] = Field(None, description="Unique administrator identifier")
     name: str = Field(..., description="Administrator name displayed in chat")
     avatar: str = Field(..., description="URL to administrator's avatar")
-    type: AdminType = Field(
-        AdminType.ADMIN, description="Type of administrator (admin or bot)"
+    type: Literal["admin", "bot", "default_admin"] = Field(
+        "admin", description="Type of administrator (admin, bot, or default_admin)"
     )
     name_internal: Optional[str] = Field(
         None, description="Internal administrator name shown only in admin panel"
@@ -252,12 +75,10 @@ class Event(BaseModel):
     type: EventType = Field(..., description="Event type information")
     user: int = Field(..., description="User ID who performed the event")
     props: Dict[str, Any] = Field(
-        default_factory=dict,
+        ...,
         description=(
-            "Event properties. Values can be: "
-            "int (-9007199254740992..+9007199254740992), "
-            "str (max 255 chars), datetime (ISO 8601: YYYY-MM-DD[THH:MM:SS]), bool, "
-            "List[str] (max 30 elements), Dict[str, str] (max 30 elements)"
+            "Event properties. Values can be: int, str, datetime, bool, "
+            "List[str], Dict[str, str]"
         ),
     )
 
@@ -312,7 +133,16 @@ class EmailStatus(BaseModel):
 
     id: int = Field(..., description="Unique status identifier")
     app: int = Field(..., description="App ID in Carrot quest")
-    status: EmailStatusEnum = Field(..., description="Email subscription status")
+    status: Literal[
+        "validation",
+        "not_valid",
+        "not_confirmed",
+        "confirmed",
+        "bounced",
+        "spam",
+        "unsubscribed",
+        "black_list",
+    ] = Field(..., description="Email subscription status")
     updated: datetime = Field(..., description="Last status update timestamp")
 
 
@@ -322,7 +152,9 @@ class PresenceDetails(BaseModel):
     page: Optional[str] = Field(None, description="Current page title")
     url: Optional[str] = Field(None, description="Current page URL")
     session_started: Optional[int] = Field(None, description="Session start timestamp")
-    presence: PresenceStatus = Field(..., description="User presence status")
+    presence: Literal["online", "idle", "offline"] = Field(
+        ..., description="User presence status"
+    )
 
 
 class UserEventInfo(BaseModel):
@@ -337,8 +169,8 @@ class UserEventInfo(BaseModel):
 class User(BaseModel):
     """User model."""
 
-    id: int = Field(..., description="Unique user identifier")
-    user_id: str = Field(..., description="Unique string identifier in app")
+    id: Union[int, str] = Field(..., description="Unique user identifier")
+    user_id: Optional[str] = Field(None, description="Unique string identifier in app")
     removed: Optional[datetime] = Field(
         None, description="Removal timestamp if deleted"
     )
@@ -353,7 +185,9 @@ class User(BaseModel):
     email_status: Optional[EmailStatus] = Field(
         None, description="Email subscription status"
     )
-    presence: Optional[PresenceStatus] = Field(None, description="User presence status")
+    presence: Optional[Literal["online", "idle", "offline"]] = Field(
+        None, description="User presence status"
+    )
     presence_details: Optional[PresenceDetails] = Field(
         None, description="User presence details"
     )
@@ -374,7 +208,18 @@ class Channel(BaseModel):
     id: int = Field(..., description="Unique channel identifier")
     name: str = Field(..., description="Channel name")
     avatar: str = Field(..., description="Channel avatar URL")
-    type: ChannelType = Field(
+    type: Literal[
+        "email",
+        "mobile",
+        "manual",
+        "vk",
+        "facebook",
+        "instagram",
+        "telegram",
+        "yandex_dialogs",
+        "viber",
+        "whatsapp",
+    ] = Field(
         ...,
         description="Channel type",
     )
@@ -415,17 +260,50 @@ class ConversationAction(BaseModel):
 class ConversationPart(BaseModel):
     """Conversation part (message) model."""
 
-    id: int = Field(..., description="Unique message identifier")
+    id: Union[int, str] = Field(..., description="Unique message identifier")
     created: int = Field(..., description="Message creation timestamp")
-    conversation: Union[int, "Conversation"] = Field(
+    conversation: Union[int, str, "Conversation"] = Field(
         ..., description="Parent conversation ID or object"
     )
     body: str = Field(..., description="Message text content")
-    type: ConversationPartType = Field(
+    type: Literal[
+        "reply_user",
+        "reply_admin",
+        "auto_reply",
+        "note",
+        "tag_added",
+        "tag_deleted",
+        "assigned",
+        "closed",
+        "final_closed",
+        "delayed",
+        "channel_changed",
+        "vote",
+        "article",
+        "chat_bot_admin",
+        "chat_bot_user",
+        "service",
+    ] = Field(
         ...,
         description="Message type",
     )
-    sent_via: SentViaType = Field(
+    sent_via: Literal[
+        "web_user",
+        "email_user",
+        "web_panel",
+        "email_admin",
+        "app_android",
+        "app_ios",
+        "app_chrome",
+        "app_desktop",
+        "message_auto",
+        "message_manual",
+        "message_chat_bot",
+        "api",
+        "integrations",
+        "system",
+        "auto_reply",
+    ] = Field(
         ...,
         description="Message sending method",
     )
@@ -448,13 +326,15 @@ class ConversationPart(BaseModel):
     body_json: Optional[Dict[str, Any]] = Field(
         None, description="JSON content for complex message types"
     )
-    direction: Optional[DirectionType] = Field(
+    direction: Optional[Literal["a2u", "u2a"]] = Field(
         None, description="Message direction (admin-to-user or user-to-admin)"
     )
     meta_data: Optional[Dict[str, Any]] = Field(
         None, description="Additional message metadata"
     )
-    reply_type: Optional[ReplyType] = Field(None, description="Expected reply type")
+    reply_type: Optional[Literal["text", "email", "phone", "no"]] = Field(
+        None, description="Expected reply type"
+    )
     actions: Optional[List[ConversationAction]] = Field(
         None, description="Available message actions"
     )
@@ -475,7 +355,7 @@ class ConversationPart(BaseModel):
 class Conversation(BaseModel):
     """Conversation model."""
 
-    id: int = Field(..., description="Unique conversation identifier")
+    id: Union[int, str] = Field(..., description="Unique conversation identifier")
     created: int = Field(..., description="Conversation creation timestamp")
     replied: bool = Field(
         ..., description="Whether conversation is visible in admin panel list"
@@ -484,23 +364,37 @@ class Conversation(BaseModel):
         None, description="Timestamp until conversation is delayed"
     )
     closed: bool = Field(..., description="Whether conversation is closed")
-    message: Optional[int] = Field(
+    message: Optional[Union[int, str]] = Field(
         None, description="ID of message that started conversation"
     )
-    type: ConversationType = Field(
+    type: Literal[
+        "email",
+        "incoming_email",
+        "popup_small",
+        "popup_big",
+        "block_popup_small",
+        "block_popup_big",
+        "popup_chat",
+        "lead_bot",
+        "routing_bot",
+        "push",
+        "sdk_push",
+    ] = Field(
         ...,
         description="Conversation type",
     )
-    reply_type: ReplyType = Field(
+    reply_type: Literal["text", "email", "phone", "push", "button", "no"] = Field(
         ...,
         description="Expected reply type",
     )
     removed: Optional[int] = Field(
         None, description="Removal timestamp if conversation was deleted"
     )
-    reply_last_type: Optional[ConversationPartType] = Field(
+    reply_last_type: Optional[
+        Literal["reply_user", "reply_admin", "auto_reply"]
+    ] = Field(
         None,
-        description="Type of last reply (reply_user or reply_admin)",
+        description="Type of last reply",
     )
     parts_count: int = Field(
         ..., description="Total number of messages in conversation"
@@ -508,13 +402,15 @@ class Conversation(BaseModel):
     assignee: Optional[Admin] = Field(
         None, description="Administrator assigned to conversation"
     )
-    sended_time: datetime = Field(..., description="First message send time")
-    admin_unread_count: int = Field(..., description="Number of unread user messages")
-    user_unread_count: int = Field(
-        ..., description="Number of unread operator messages"
+    sended_time: Optional[datetime] = Field(None, description="First message send time")
+    admin_unread_count: Optional[int] = Field(
+        None, description="Number of unread user messages"
     )
-    not_answered_admin_replies: int = Field(
-        ...,
+    user_unread_count: Optional[int] = Field(
+        None, description="Number of unread operator messages"
+    )
+    not_answered_admin_replies: Optional[int] = Field(
+        None,
         description="Number of unanswered operator messages",
     )
     unread_parts_count: Optional[int] = Field(
@@ -541,13 +437,31 @@ class Conversation(BaseModel):
     last_user_reply_time: Optional[datetime] = Field(
         None, description="Timestamp of last user reply"
     )
-    status: Optional[MessageStatus] = Field(
-        None, description="Message sending status for auto/manual messages"
-    )
-    assistant_type: Optional[AssistantType] = Field(
-        None, description="Type of assistant managing conversation"
-    )
-    recipient_type: Optional[RecipientType] = Field(
+    status: Optional[
+        Literal[
+            "created",
+            "rendered",
+            "sent",
+            "accepted",
+            "delivered",
+            "bounced",
+            "complained",
+            "dropped",
+            "error",
+        ]
+    ] = Field(None, description="Message sending status for auto/manual messages")
+    assistant_type: Optional[
+        Literal[
+            "dialogflow",
+            "yandex_ai",
+            "lead_bot",
+            "routing_bot",
+            "facebook_bot",
+            "telegram_bot",
+            "widget_bot",
+        ]
+    ] = Field(None, description="Type of assistant managing conversation")
+    recipient_type: Optional[Literal["all", "web", "sdk"]] = Field(
         None, description="Message recipient type"
     )
     user: Optional[User] = Field(None, description="User participating in conversation")

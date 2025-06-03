@@ -1,9 +1,11 @@
 """API models."""
 
-from .webhook import WebhookRequest, WebhookResponse, WebhookStatus
+from .message import InputMessage, Message, MessageResponse, MessageRole, MessageStatus
 
 __all__ = [
-    "WebhookRequest",
-    "WebhookResponse",
-    "WebhookStatus",
+    "InputMessage",
+    "Message",
+    "MessageResponse",
+    "MessageRole",
+    "MessageStatus",
 ]

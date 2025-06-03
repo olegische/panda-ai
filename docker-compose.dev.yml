@@ -1,0 +1,21 @@
+services:
+  xrouter-server:
+    container_name: ${PROJECT_NAME}
+    image: cr.yandex/${REGISTRY_ID}/${PROJECT_NAME}:latest
+    platform: linux/amd64
+    ports:
+      - "${PORT:-8990}:${PORT:-8990}"
+    env_file:
+      - ./.env
+    volumes:
+      - ./secrets/xra_public_key.pem:/app/data/public/xra_public_key.pem
+    command: >
+      uvicorn src.main:get_app --host 0.0.0.0 --port ${PORT:-8990} --reload --factory
+    restart: unless-stopped
+    networks:
+      - xrouter-net
+
+networks:
+  xrouter-net:
+    external: true
+    name: xrouter-net

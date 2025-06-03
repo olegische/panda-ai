@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from .common import Conversation, ConversationPart, ResponseMeta
+from .objects import Conversation, ConversationPart, ResponseMeta
 
 
 class GetConversationResponse(BaseModel):

@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Host
     HOST: str = "0.0.0.0"
-    PORT: int = 8900
+    PORT: int = 8990
 
     # CORS
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
@@ -51,14 +51,13 @@ class Settings(BaseSettings):
     LOG_EXTRA_FIELDS: list[str] = []  # Дополнительные поля для логов
 
     # Carrot Quest
-    CARROT_QUEST_WEBHOOK_TOKEN: str = (
-        ""  # Token from Carrot Quest admin panel for webhook verification
-    )
+    CARROT_QUEST_MCP_URL: str = ""
 
     # OpenAI
+    OPENAI_MCP_URL: str = ""
     OPENAI_API_KEY: str = ""  # OpenAI API key
     OPENAI_ORG_ID: str = ""  # OpenAI organization ID
-    ORCHESTRATOR_MODEL: str = "gpt-4-turbo-preview"  # Model for meta-orchestrator
+    ORCHESTRATOR_MODEL: str = "gpt-4.1"  # Model for meta-orchestrator
     OPENAI_MODELS_CACHE_TTL: int = 3600  # 1 hour - cache TTL for available models list
 
     class Config:
