@@ -1,0 +1,27 @@
+[project]
+name = "panda-adk-agent"
+version = "0.1.0"
+description = "A test agent using Google ADK and LiteLLM."
+authors = [
+    {name = "olegische", email = "olromanchuk@gmail.com"},
+]
+dependencies = [
+    "google-adk",
+    "litellm",
+    "python-dotenv",
+]
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/multi_tool_agent"]
