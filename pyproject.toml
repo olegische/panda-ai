@@ -15,10 +15,14 @@ dependencies = [
     "uvicorn>=0.27.1,<1.0.0",
     "pydantic>=2.5.2,<3.0.0",
     "pydantic-settings>=2.1.0,<3.0.0",
-    "httpx==0.27.2",
+    "httpx>=0.28.1",
     "redis>=5.0.0",  # For user-assistant mapping storage
     "sseclient-py==1.8.0",  # For SSE communication with containers
-    "openai>=1.18.0"
+    "openai>=1.18.0",
+    # panda-adk dependencies
+    "google-adk>=1.7.0",
+    "litellm>=1.74.7",
+    "python-dotenv"
 ]
 
 [project.optional-dependencies]

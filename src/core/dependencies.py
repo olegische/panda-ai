@@ -34,16 +34,20 @@ def get_settings(request: Request) -> Settings:
     return cast(Settings, request.app.state.settings)
 
 
-def get_dreamer_agent(request: Request) -> DreamerAgent:
-    """Get Dreamer agent from app state.
+def get_dreamer_agent(
+    logger: Annotated[LoggerService, Depends(get_logger)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DreamerAgent:
+    """Create a new Dreamer agent instance for the request.
 
     Args:
-        request: FastAPI request object
+        logger: Logger service instance
+        settings: Settings instance
 
     Returns:
         DreamerAgent instance
     """
-    return cast(DreamerAgent, request.app.state.dreamer_agent)
+    return DreamerAgent(logger=logger, settings=settings)
 
 
 def get_carrot_quest_client(
